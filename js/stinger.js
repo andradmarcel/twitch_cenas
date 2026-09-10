@@ -100,8 +100,9 @@
 
       // Make overlay visible
       this.overlay.classList.remove('stinger-animating');
-      void this.overlay.offsetWidth; // force reflow
-      this.overlay.classList.add('active', 'stinger-animating');
+      requestAnimationFrame(() => {
+        this.overlay.classList.add('active', 'stinger-animating');
+      });
 
       // Play audio swoosh + impact
       this.playWhooshSound();

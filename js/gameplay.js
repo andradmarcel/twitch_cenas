@@ -53,8 +53,11 @@
       el.style.transform = 'translateY(0)';
       if (pillEl) {
         pillEl.classList.remove('pill-updated');
-        void pillEl.offsetWidth; // trigger reflow
-        pillEl.classList.add('pill-updated');
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            pillEl.classList.add('pill-updated');
+          });
+        });
       }
     }, 250);
   }
