@@ -93,7 +93,8 @@
   class AlertManager {
     constructor() {
       this.queue = [];
-      this.isShowing = false;
+      this.isProcessing = false;
+      this.displayDurationMs = 3000; // 3 seconds screen time per alert
       this.audio = new AlertAudioSynth();
       this.container = null;
       this.broadcastChannel = null;
@@ -201,20 +202,24 @@
       setTimeout(() => this.recentAlertIds.delete(alertId), 5000);
 
       this.queue.push(alertData);
-      if (!this.isShowing) {
-        this.processNext();
-      }
+      this.processQueue();
     }
 
-    processNext() {
-      if (this.queue.length === 0) {
-        this.isShowing = false;
-        return;
+    async processQueue() {
+      // Atomic mutex guard: guarantees alerts are processed strictly one by one
+      if (this.isProcessing) return;
+      this.isProcessing = true;
+
+      while (this.queue.length > 0) {
+        const data = this.queue.shift();
+        try {
+          await this.renderAlertLifecycle(data);
+        } catch (err) {
+          console.error('[Alerts] Error during alert lifecycle:', err);
+        }
       }
 
-      this.isShowing = true;
-      const data = this.queue.shift();
-      this.renderAlert(data);
+      this.isProcessing = false;
     }
 
     // Strict HTML sanitizer to prevent XSS attacks in OBS Studio Browser Source
@@ -228,91 +233,108 @@
         .replace(/'/g, '&#039;');
     }
 
-    renderAlert(data) {
-      const type = (data.type || 'follower').toLowerCase();
-      const safeUser = this.escapeHtml(data.user || 'Novo Viewer');
-      const safeAmount = this.escapeHtml(data.amount || '');
-      const safeMessage = this.escapeHtml(data.message || '');
-      const rawDetail = data.detail || '';
+    renderAlertLifecycle(data) {
+      return new Promise((resolve) => {
+        const type = (data.type || 'follower').toLowerCase();
+        const safeUser = this.escapeHtml(data.user || 'Novo Viewer');
+        const safeAmount = this.escapeHtml(data.amount || '');
+        const safeMessage = this.escapeHtml(data.message || '');
+        const rawDetail = data.detail || '';
 
-      // Set config based on type
-      let badgeText = '★ NOVO SEGUIDOR';
-      let defaultDetail = 'começou a seguir o canal!';
-      let typeClass = 'type-follower';
+        // Set config based on type
+        let badgeText = '★ NOVO SEGUIDOR';
+        let defaultDetail = 'começou a seguir o canal!';
+        let typeClass = 'type-follower';
 
-      if (type === 'sub' || type === 'resub') {
-        badgeText = '💎 NOVO SUB';
-        defaultDetail = rawDetail ? this.escapeHtml(rawDetail) : 'acabou de se inscrever no canal!';
-        typeClass = 'type-sub';
-      } else if (type === 'donation' || type === 'pix') {
-        badgeText = '💵 NOVA DOAÇÃO // PIX';
-        defaultDetail = `doou <b>${safeAmount || 'R$ 10,00'}</b>!`;
-        typeClass = 'type-donation';
-      } else if (type === 'bits' || type === 'cheer') {
-        badgeText = '⚡ CHEER DE BITS';
-        defaultDetail = `enviou <b>${safeAmount || '100'} Bits</b>!`;
-        typeClass = 'type-bits';
-      } else if (type === 'raid' || type === 'host') {
-        badgeText = '🚨 RAID ENTRANTE';
-        defaultDetail = `chegou com <b>${safeAmount || '50'} espectadores</b>!`;
-        typeClass = 'type-raid';
-      }
-
-      const detailHtml = rawDetail ? this.escapeHtml(rawDetail) : defaultDetail;
-
-      // Build safe alert HTML
-      const alertBox = document.createElement('div');
-      alertBox.className = `alert-box ${typeClass}`;
-      alertBox.innerHTML = `
-        <div class="alert-mascot-avatar">
-          <div class="alert-ring-pulse"></div>
-          <img src="assets/mascot.png" alt="DEC4LAND Mascote" class="alert-mascot-img">
-        </div>
-
-        <div class="alert-content">
-          <div class="alert-type-badge">${badgeText}</div>
-          <div class="alert-user-name">${safeUser}</div>
-          <div class="alert-detail-text">${detailHtml}</div>
-          ${safeMessage ? `<div class="alert-custom-message">"${safeMessage}"</div>` : ''}
-        </div>
-      `;
-
-      // Clear any remaining elements in container to prevent memory leaks
-      while (this.container.firstChild) {
-        this.container.removeChild(this.container.firstChild);
-      }
-      this.container.appendChild(alertBox);
-
-      // Play custom synth audio
-      this.audio.playSound(type);
-
-      // Trigger animation in GPU layer
-      requestAnimationFrame(() => {
-        alertBox.classList.add('active');
-      });
-
-      // Clear pending dismiss timer if exists
-      if (this._dismissTimer) clearTimeout(this._dismissTimer);
-      if (this._removeTimer) clearTimeout(this._removeTimer);
-
-      // Clean node disposal when alert leaves
-      const cleanupAlertNode = () => {
-        alertBox.removeEventListener('transitionend', cleanupAlertNode);
-        if (alertBox.parentElement) {
-          alertBox.remove();
+        if (type === 'sub' || type === 'resub') {
+          badgeText = '💎 NOVO SUB';
+          defaultDetail = rawDetail ? this.escapeHtml(rawDetail) : 'acabou de se inscrever no canal!';
+          typeClass = 'type-sub';
+        } else if (type === 'donation' || type === 'pix') {
+          badgeText = '💵 NOVA DOAÇÃO // PIX';
+          defaultDetail = `doou <b>${safeAmount || 'R$ 10,00'}</b>!`;
+          typeClass = 'type-donation';
+        } else if (type === 'bits' || type === 'cheer') {
+          badgeText = '⚡ CHEER DE BITS';
+          defaultDetail = `enviou <b>${safeAmount || '100'} Bits</b>!`;
+          typeClass = 'type-bits';
+        } else if (type === 'raid' || type === 'host') {
+          badgeText = '🚨 RAID ENTRANTE';
+          defaultDetail = `chegou com <b>${safeAmount || '50'} espectadores</b>!`;
+          typeClass = 'type-raid';
         }
-        setTimeout(() => this.processNext(), 350);
-      };
 
-      // Stay on screen for 6.2 seconds
-      this._dismissTimer = setTimeout(() => {
-        alertBox.classList.remove('active');
-        alertBox.classList.add('leaving');
+        const detailHtml = rawDetail ? this.escapeHtml(rawDetail) : defaultDetail;
 
-        alertBox.addEventListener('transitionend', cleanupAlertNode, { once: true });
-        // Fallback safeguard timer if transitionend is skipped by OBS throttling
-        this._removeTimer = setTimeout(cleanupAlertNode, 600);
-      }, 6200);
+        // Build safe alert HTML
+        const alertBox = document.createElement('div');
+        alertBox.className = `alert-box ${typeClass}`;
+        alertBox.innerHTML = `
+          <div class="alert-mascot-avatar">
+            <div class="alert-ring-pulse"></div>
+            <img src="assets/mascot.png" alt="DEC4LAND Mascote" class="alert-mascot-img">
+          </div>
+
+          <div class="alert-content">
+            <div class="alert-type-badge">${badgeText}</div>
+            <div class="alert-user-name">${safeUser}</div>
+            <div class="alert-detail-text">${detailHtml}</div>
+            ${safeMessage ? `<div class="alert-custom-message">"${safeMessage}"</div>` : ''}
+          </div>
+        `;
+
+        // Clear any remaining elements in container to prevent memory leaks
+        while (this.container.firstChild) {
+          this.container.removeChild(this.container.firstChild);
+        }
+        this.container.appendChild(alertBox);
+
+        // Play custom synth audio
+        this.audio.playSound(type);
+
+        // Trigger animation in GPU layer
+        requestAnimationFrame(() => {
+          alertBox.classList.add('active');
+        });
+
+        let isDone = false;
+        let removeTimer = null;
+        let dismissTimer = null;
+
+        const cleanupAndResolve = () => {
+          if (isDone) return;
+          isDone = true;
+
+          alertBox.removeEventListener('transitionend', onTransitionEnd);
+          if (removeTimer) clearTimeout(removeTimer);
+          if (dismissTimer) clearTimeout(dismissTimer);
+
+          if (alertBox.parentElement) {
+            alertBox.remove();
+          }
+
+          // Rhythmic pause between consecutive alerts (350ms)
+          setTimeout(() => {
+            resolve();
+          }, 350);
+        };
+
+        const onTransitionEnd = (e) => {
+          if (e.target === alertBox) {
+            cleanupAndResolve();
+          }
+        };
+
+        // Screen display time: precisely 3.0 seconds (user configured)
+        dismissTimer = setTimeout(() => {
+          alertBox.classList.remove('active');
+          alertBox.classList.add('leaving');
+
+          alertBox.addEventListener('transitionend', onTransitionEnd);
+          // Safeguard fallback timer in case OBS CEF suppresses transitionend
+          removeTimer = setTimeout(cleanupAndResolve, 600);
+        }, this.displayDurationMs);
+      });
     }
   }
 
