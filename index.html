@@ -571,8 +571,11 @@
         <button class="tab-btn" onclick="switchScene('gameplay')">
           <span>02.</span> GAMEPLAY OVERLAY
         </button>
+        <button class="tab-btn" onclick="switchScene('brb')">
+          <span>03.</span> JÁ VOLTO (BRB)
+        </button>
         <button class="tab-btn" onclick="switchScene('ending')">
-          <span>03.</span> ENCERRAMENTO
+          <span>04.</span> ENCERRAMENTO
         </button>
       </div>
     </header>
@@ -724,10 +727,21 @@
         <div class="card-obs-url" id="url-gameplay">gameplay.html</div>
       </div>
 
-      <!-- Ending Card -->
+      <!-- BRB Card -->
       <div class="scene-card">
         <div class="card-top">
           <span class="card-tag">CENA 03</span>
+          <a href="brb.html" target="_blank" class="action-btn">Abrir</a>
+        </div>
+        <h3 class="card-title">JÁ VOLTO (BRB)</h3>
+        <p class="card-desc">Cena de intervalo com timer interativo, medidor dinâmico de hidratação/estamina, tocador lofi com equalizador e mascote holográfico em standby.</p>
+        <div class="card-obs-url" id="url-brb">brb.html</div>
+      </div>
+
+      <!-- Ending Card -->
+      <div class="scene-card">
+        <div class="card-top">
+          <span class="card-tag">CENA 04</span>
           <a href="ending.html" target="_blank" class="action-btn">Abrir</a>
         </div>
         <h3 class="card-title">ENCERRAMENTO</h3>
@@ -771,7 +785,7 @@
         <div class="step-item">
           <span class="step-number">01</span>
           <div class="step-title">Criar a Cena no OBS</div>
-          <div class="step-desc">No painel <b>Cenas</b> do OBS Studio, crie 3 cenas com os nomes: <i>Live Começando</i>, <i>Gameplay</i> e <i>Encerramento</i>.</div>
+          <div class="step-desc">No painel <b>Cenas</b> do OBS Studio, crie 4 cenas com os nomes: <i>Live Começando</i>, <i>Gameplay</i>, <i>Já Volto</i> e <i>Encerramento</i>.</div>
         </div>
 
         <div class="step-item">
@@ -874,6 +888,8 @@
       if (sD) gameplayUrl += '&donate=' + encodeURIComponent(sD);
       if (sS) gameplayUrl += '&sub=' + encodeURIComponent(sS);
       document.getElementById('url-gameplay').textContent = gameplayUrl;
+      const brbEl = document.getElementById('url-brb');
+      if (brbEl) brbEl.textContent = base + 'brb.html';
       document.getElementById('url-ending').textContent = base + 'ending.html';
       const alertsEl = document.getElementById('url-alerts');
       if (alertsEl) alertsEl.textContent = base + 'alerts.html';
@@ -984,8 +1000,15 @@
         mockGame.style.display = 'block';
         titleEl.textContent = 'CENA: GAMEPLAY OVERLAY (Twitch #' + currentChannel.toUpperCase() + ')';
         btnFullscreen.href = 'gameplay.html?channel=' + encodeURIComponent(currentChannel);
-      } else if (sceneName === 'ending') {
+      } else if (sceneName === 'brb') {
         const btn = document.querySelector('.tab-btn:nth-child(3)');
+        if (btn) btn.classList.add('active');
+        iframe.src = 'brb.html';
+        mockGame.style.display = 'none';
+        titleEl.textContent = 'CENA: JÁ VOLTO / BE RIGHT BACK (1920x1080 Full HD)';
+        btnFullscreen.href = 'brb.html';
+      } else if (sceneName === 'ending') {
+        const btn = document.querySelector('.tab-btn:nth-child(4)');
         if (btn) btn.classList.add('active');
         iframe.src = 'ending.html';
         mockGame.style.display = 'none';

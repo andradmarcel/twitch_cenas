@@ -59,7 +59,28 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
 
 ---
 
-### 3. 🚨 Alertas Personalizados da Twitch (`alerts.html` e embutido em `gameplay.html`)
+### 3. ☕ Já Volto / Be Right Back (`brb.html`)
+- **Resolução**: 1920x1080 Full HD
+- **Recursos**:
+  - Título principal **JÁ VOLTO!** com tag animada `// PAUSA RÁPIDA` e efeito neon glow.
+  - Cronômetro de intervalo dinâmico (inicia em 3 minutos por padrão) com barra de progresso neon com ponto de luz em corrida.
+  - **Medidor Animado de Hidratação / Estamina**: barra estilo RPG cibernético com fluxo de energia pulsante e recarga gradual durante a pausa.
+  - **Tocador BGM "Tocando Agora"**: mini player synthwave com equalizador sonoro de barras animadas reativas e letreiro marquee da música.
+  - **Mascote Holográfico em Modo Standby**: mascote flutuando com aura carmesim pulsante, anéis 3D girando em eixos opostos e laser scanner holográfico contínuo.
+  - Rotação de frases dinâmicas de pausa e postura no ticker inferior.
+  - Redes sociais e equalizador de áudio no rodapé.
+- **Parâmetros personalizáveis via URL**:
+  - `brb.html?time=5` (define 5 minutos de intervalo)
+  - `brb.html?title=PAUSA+RAPIDA` (muda a mensagem de título)
+- **Atalhos de Teclado no Navegador / OBS**:
+  - `Espaço`: Pausar / Continuar a contagem
+  - `R`: Reiniciar o cronômetro
+  - `M`: Alternar modo (Regressivo vs Tempo AFK decorrido)
+  - `Seta Cima / Seta Baixo`: Adicionar / subtrair 1 minuto
+
+---
+
+### 4. 🚨 Alertas Personalizados da Twitch (`alerts.html` e embutido em `gameplay.html`)
 - **Resolução**: 1920x1080 Full HD (Transparente)
 - **Tipos de Alerta com Identidade Visual Própria**:
   - **★ Novo Seguidor**: Borda ciano/azul neon elétrico com efeito laser.
