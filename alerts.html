@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DEC4LAND - Alertas Twitch Standalone</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/alerts.css">
+  <style>
+    html, body {
+      background: transparent !important;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Container flexível: se adapta a qualquer tamanho definido no OBS (ex: 800x250) */
+    .alert-container {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      transform: none !important;
+      width: 100%;
+      max-width: 780px;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Alert Box Container (Popups appear here) -->
+  <div class="alert-container"></div>
+
+  <script src="js/alerts.js"></script>
+</body>
+</html>

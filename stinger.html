@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+  <title>DEC4LAND - Transição Stinger para OBS Studio</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/stinger.css">
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 50%, #1a0513 0%, #080206 100%);
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-ui);
+    }
+
+    .stinger-hub-card {
+      background: rgba(18, 5, 14, 0.9);
+      border: 1px solid rgba(255, 26, 75, 0.4);
+      border-radius: 16px;
+      padding: 40px 50px;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 30px var(--neon-red-glow);
+      z-index: 10;
+    }
+
+    .stinger-mascot-badge {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid var(--neon-red);
+      background: #240718;
+      box-shadow: 0 0 20px var(--neon-red-glow);
+    }
+
+    .stinger-hub-card h1 {
+      font-family: var(--font-display);
+      font-size: 54px;
+      letter-spacing: 3px;
+      margin: 0;
+      color: #fff;
+    }
+
+    .stinger-hub-card p {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-dim);
+      max-width: 680px;
+    }
+
+    .stinger-actions-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .stinger-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-family: var(--font-brand);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1px solid var(--neon-red);
+      background: rgba(255, 26, 75, 0.2);
+      color: #fff;
+      transition: all 0.25s ease;
+    }
+
+    .stinger-btn:hover {
+      background: var(--neon-red);
+      box-shadow: 0 0 25px var(--neon-red-glow);
+      transform: translateY(-2px);
+    }
+
+    .stinger-btn.primary {
+      background: var(--neon-red);
+      box-shadow: 0 0 20px var(--neon-red-glow);
+    }
+
+    /* OBS Settings Box */
+    .obs-stinger-config {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px dashed rgba(255, 26, 75, 0.35);
+      border-radius: 10px;
+      padding: 18px 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+      text-align: left;
+    }
+
+    .config-param {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .config-label {
+      font-family: var(--font-brand);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: var(--neon-red-bright);
+      text-transform: uppercase;
+    }
+
+    .config-val {
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Stinger Transition Elements (Injected by js/stinger.js) -->
+
+  <div class="stinger-hub-card">
+    <img src="assets/mascot.png" alt="DEC4LAND" class="stinger-mascot-badge">
+    <h1>TRANSIÇÃO STINGER DEC4LAND</h1>
+    <p>
+      Efeito animado de alta velocidade em lâminas cibernéticas cortando a tela em 1080p, com corte limpo e áudio futurista sincronizado para transição entre cenas no OBS Studio.
+    </p>
+
+    <div class="stinger-actions-row">
+      <button class="stinger-btn primary" onclick="testTransition()">
+        <span>⚡</span> Testar Transição com Som
+      </button>
+      <button class="stinger-btn" onclick="recordAndDownloadWebm()" id="btn-export-webm">
+        <span>🎬</span> Baixar Vídeo .WEBM para OBS
+      </button>
+    </div>
+
+    <!-- Configuration Helper for OBS -->
+    <div class="obs-stinger-config">
+      <div class="config-param">
+        <span class="config-label">Tipo no OBS</span>
+        <span class="config-val">Stinger</span>
+      </div>
+      <div class="config-param">
+        <span class="config-label">Ponto de Transição</span>
+        <span class="config-val">500 ms (Tempo)</span>
+      </div>
+      <div class="config-param">
+        <span class="config-label">Monitoramento Áudio</span>
+        <span class="config-val">Monitorar e Enviar</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/stinger.js"></script>
+  <script>
+    function testTransition() {
+      if (window.playStinger) {
+        window.playStinger(
+          () => console.log('Corte de transição (500ms)!'),
+          () => console.log('Transição concluída!')
+        );
+      }
+    }
+
+    // Direct download of the 1080p 60 FPS master Stinger video with Alpha Transparency and Audio
+    function recordAndDownloadWebm() {
+      const a = document.createElement('a');
+      a.href = 'stinger_dec4land.webm';
+      a.download = 'stinger_dec4land.webm';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  </script>
+</body>
+</html>

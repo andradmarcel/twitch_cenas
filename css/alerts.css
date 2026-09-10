@@ -1,0 +1,272 @@
+/* ==========================================================================
+   DEC4LAND - TWITCH ALERT SYSTEM STYLES (CYBERPUNK WINE & NEON CRIMSON)
+   ========================================================================== */
+
+.alert-container {
+  position: absolute;
+  top: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 780px;
+  min-height: 220px;
+  pointer-events: none;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Base Alert Box */
+.alert-box {
+  position: relative;
+  width: 100%;
+  background: rgba(10, 3, 8, 0.22); /* Fundo vidro translúcido */
+  border: 2px solid var(--neon-red);
+  border-radius: 14px;
+  padding: 24px 32px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 26px;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 0 25px var(--neon-red-glow),
+    inset 0 0 20px rgba(255, 26, 75, 0.08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-40px) scale(0.92);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alert-box.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.alert-box.leaving {
+  opacity: 0;
+  transform: translateY(-30px) scale(0.95);
+  transition: all 0.4s ease-in;
+}
+
+/* Animated Top Laser Bar */
+.alert-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #ffffff, var(--neon-red), transparent);
+  animation: laserScan 2.5s infinite linear;
+}
+
+@keyframes laserScan {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Tech Corner Brackets (desativados a pedido) */
+.alert-corner {
+  display: none !important;
+}
+
+/* Mascote Reactor Avatar */
+.alert-mascot-avatar {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-mascot-img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid var(--neon-red);
+  background: rgba(25, 5, 18, 0.25);
+  box-shadow: 0 0 20px var(--neon-red-glow);
+  z-index: 2;
+  animation: mascotAlertPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alert-ring-pulse {
+  position: absolute;
+  width: 145px;
+  height: 145px;
+  border: 2px dashed var(--neon-red);
+  border-radius: 50%;
+  animation: alertRingRotate 12s linear infinite, ringPulse 1.8s infinite ease-in-out alternate;
+  z-index: 1;
+}
+
+@keyframes mascotAlertPop {
+  0% { transform: scale(0.4) rotate(-15deg); }
+  60% { transform: scale(1.15) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes alertRingRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ringPulse {
+  0% { transform: scale(0.95); opacity: 0.4; }
+  100% { transform: scale(1.12); opacity: 0.9; }
+}
+
+/* Alert Content */
+.alert-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alert-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-brand);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--neon-red-bright);
+}
+
+.alert-user-name {
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: 0.95;
+  letter-spacing: 2.5px;
+  color: #ffffff;
+  text-shadow: 0 0 20px var(--neon-red-glow);
+  word-break: break-word;
+}
+
+.alert-detail-text {
+  font-family: var(--font-brand);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert-detail-text b {
+  color: #ffffff;
+}
+
+.alert-custom-message {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #ffb8c8;
+  background: rgba(255, 26, 75, 0.1);
+  border-left: 3px solid var(--neon-red);
+  padding: 8px 14px;
+  border-radius: 4px;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   THEMED ALERT VARIANTS
+   ========================================================================== */
+
+/* 1. SEGUIDOR (Follower - Crimson & Cyan) */
+.alert-box.type-follower {
+  background: rgba(2, 12, 22, 0.22);
+  border-color: #00d2ff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 30px rgba(0, 210, 255, 0.4);
+}
+.alert-box.type-follower .alert-type-badge {
+  color: #00d2ff;
+}
+.alert-box.type-follower .alert-mascot-img {
+  border-color: #00d2ff;
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.45);
+}
+.alert-box.type-follower .alert-ring-pulse {
+  border-color: #00d2ff;
+}
+
+/* 2. SUB / RESUB (Subscriber - Gold & Ruby) */
+.alert-box.type-sub {
+  background: rgba(22, 14, 2, 0.22);
+  border-color: #ffb800;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 35px rgba(255, 184, 0, 0.4);
+}
+.alert-box.type-sub .alert-type-badge {
+  color: #ffb800;
+}
+.alert-box.type-sub .alert-user-name {
+  text-shadow: 0 0 25px rgba(255, 184, 0, 0.6);
+}
+.alert-box.type-sub .alert-mascot-img {
+  border-color: #ffb800;
+  box-shadow: 0 0 20px rgba(255, 184, 0, 0.45);
+}
+.alert-box.type-sub .alert-ring-pulse {
+  border-color: #ffb800;
+}
+
+/* 3. DOAÇÃO / PIX (Donation - Emerald & Neon Green) */
+.alert-box.type-donation {
+  background: rgba(2, 22, 10, 0.22);
+  border-color: #00ff7f;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 35px rgba(0, 255, 127, 0.4);
+}
+.alert-box.type-donation .alert-type-badge {
+  color: #00ff7f;
+}
+.alert-box.type-donation .alert-user-name {
+  color: #ffffff;
+  text-shadow: 0 0 25px rgba(0, 255, 127, 0.6);
+}
+.alert-box.type-donation .alert-mascot-img {
+  border-color: #00ff7f;
+  box-shadow: 0 0 20px rgba(0, 255, 127, 0.45);
+}
+.alert-box.type-donation .alert-ring-pulse {
+  border-color: #00ff7f;
+}
+
+/* 4. CHEER / BITS (Bits - Magenta / Purple Spark) */
+.alert-box.type-bits {
+  background: rgba(22, 2, 20, 0.22);
+  border-color: #ff00ea;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 35px rgba(255, 0, 234, 0.4);
+}
+.alert-box.type-bits .alert-type-badge {
+  color: #ff00ea;
+}
+.alert-box.type-bits .alert-mascot-img {
+  border-color: #ff00ea;
+  box-shadow: 0 0 20px rgba(255, 0, 234, 0.45);
+}
+.alert-box.type-bits .alert-ring-pulse {
+  border-color: #ff00ea;
+}
+
+/* 5. RAID / HOST (Raid - Fiery Alert Crimson) */
+.alert-box.type-raid {
+  background: rgba(25, 3, 6, 0.26);
+  border-color: #ff2a40;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 40px rgba(255, 42, 64, 0.5);
+  animation: raidHazardPulse 1s infinite alternate;
+}
+.alert-box.type-raid .alert-type-badge {
+  color: #ff3344;
+}
+
+@keyframes raidHazardPulse {
+  0% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 20px rgba(255, 42, 64, 0.35); }
+  100% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 45px rgba(255, 42, 64, 0.75); }
+}

@@ -1,0 +1,437 @@
+/* ==========================================================================
+   DEC4LAND - GAMEPLAY OVERLAY STYLES (OBS TRANSPARENT HUD)
+   ========================================================================== */
+
+body.gameplay-body {
+  background: transparent !important;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+.gameplay-hud {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   WEBCAM MODULE (Configurable Position: Default Top-Left)
+   ========================================================================== */
+
+.webcam-module {
+  position: absolute;
+  width: 420px;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+/* Positions */
+.webcam-module.pos-top-left {
+  top: 35px;
+  left: 35px;
+}
+
+.webcam-module.pos-top-right {
+  top: 35px;
+  right: 35px;
+}
+
+.webcam-module.pos-bottom-left {
+  bottom: 35px;
+  left: 35px;
+}
+
+.webcam-module.pos-bottom-right {
+  bottom: 35px;
+  right: 35px;
+}
+
+/* ==========================================================================
+   FRAME WRAPPER & ANIMATED CYBER SVG LASER BORDER
+   ========================================================================== */
+
+.webcam-frame-wrapper {
+  position: relative;
+  border-radius: 10px;
+  background: transparent !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 26, 75, 0.4);
+  overflow: visible;
+}
+
+/* SVG Laser Border running around the camera */
+.webcam-svg-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  overflow: visible;
+}
+
+.svg-border-track {
+  fill: none;
+  stroke: rgba(255, 26, 75, 0.35);
+  stroke-width: 2;
+  rx: 10;
+}
+
+.svg-border-laser {
+  fill: none;
+  stroke: var(--neon-red-bright);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 120 400;
+  stroke-dashoffset: 0;
+  animation: laserSweep 4s linear infinite;
+  filter: drop-shadow(0 0 8px var(--neon-red)) drop-shadow(0 0 3px #ffffff);
+  rx: 10;
+}
+
+@keyframes laserSweep {
+  from { stroke-dashoffset: 1040; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* ==========================================================================
+   16:9 WEBCAM WINDOW CUTOUT (100% CLEAN FOR OBS CAMERA SOURCE)
+   ========================================================================== */
+
+.webcam-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: transparent !important; /* Must be 100% transparent for camera */
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: hidden;
+  z-index: 2;
+  border: 1.5px solid rgba(255, 26, 75, 0.5);
+  border-bottom: none;
+}
+
+.webcam-cutout {
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: var(--font-brand);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  border: 1px dashed rgba(255, 26, 75, 0.3);
+  border-radius: 6px;
+  width: 80%;
+  height: 70%;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.cam-ph-icon {
+  font-size: 20px;
+  opacity: 0.6;
+}
+
+/* Corner Brackets */
+.cam-bracket {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: #ffffff;
+  border-style: solid;
+  z-index: 5;
+  filter: drop-shadow(0 0 4px var(--neon-red));
+}
+
+.cam-bracket.cam-tl {
+  top: 4px; left: 4px;
+  border-width: 2.5px 0 0 2.5px;
+  border-top-left-radius: 4px;
+}
+
+.cam-bracket.cam-tr {
+  top: 4px; right: 4px;
+  border-width: 2.5px 2.5px 0 0;
+  border-top-right-radius: 4px;
+}
+
+.cam-bracket.cam-bl {
+  bottom: 4px; left: 4px;
+  border-width: 0 0 2.5px 2.5px;
+  border-bottom-left-radius: 4px;
+}
+
+.cam-bracket.cam-br {
+  bottom: 4px; right: 4px;
+  border-width: 0 2.5px 2.5px 0;
+  border-bottom-right-radius: 4px;
+}
+
+/* Live Status Badge */
+.cam-live-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(14, 3, 10, 0.85);
+  border: 1px solid var(--neon-red);
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-brand);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 26, 75, 0.4);
+  z-index: 6;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--neon-red);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--neon-red-glow);
+  animation: pulseLive 1.2s infinite;
+}
+
+@keyframes pulseLive {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* ==========================================================================
+   BOTTOM BRAND BAR: ANIMATED DEC4LAND
+   ========================================================================== */
+
+.webcam-brand-bar {
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(90deg, #13030f 0%, #0c0108 50%, #160411 100%);
+  border-top: 1.5px solid rgba(255, 26, 75, 0.6);
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: inset 0 2px 10px rgba(255, 26, 75, 0.15);
+}
+
+.brand-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mini-mascot-ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--neon-red);
+  background: #1c0514;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px var(--neon-red-glow);
+  position: relative;
+}
+
+.mini-mascot-img {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.brand-name-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Animated Streamer Name with Holographic Shimmer */
+.streamer-name-animated {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 2.5px;
+  line-height: 0.9;
+  text-transform: uppercase;
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #ffffff 20%,
+    var(--neon-red-bright) 40%,
+    #ffffff 60%,
+    var(--neon-red-bright) 80%,
+    #ffffff 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 3.5s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 26, 75, 0.75));
+}
+
+@keyframes textShimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.brand-tagline {
+  font-family: var(--font-brand);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--neon-red-bright);
+  text-transform: uppercase;
+}
+
+.brand-right {
+  display: flex;
+  align-items: center;
+}
+
+.brand-social-pill {
+  font-family: var(--font-brand);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 26, 75, 0.15);
+  border: 1px solid rgba(255, 26, 75, 0.4);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   COMPACT EVENT PILLS (ÚLTIMO FOLLOW, ÚLTIMO DONATE, ÚLTIMO SUB)
+   ========================================================================== */
+
+.webcam-events-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.event-pill {
+  background: rgba(14, 3, 11, 0.94);
+  border-radius: 6px;
+  padding: 5px 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 26, 75, 0.25);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.event-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--neon-red);
+}
+
+.pill-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.pill-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pill-tag {
+  font-family: var(--font-brand);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pill-val {
+  font-family: var(--font-brand);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Follow Theme (Gold) */
+.follow-pill {
+  border-left: 2.5px solid #ffb800;
+}
+.follow-pill .pill-icon {
+  background: rgba(255, 184, 0, 0.15);
+  color: #ffb800;
+  text-shadow: 0 0 6px rgba(255, 184, 0, 0.5);
+}
+
+/* Donate Theme (Emerald Green) */
+.donate-pill {
+  border-left: 2.5px solid #00ff88;
+}
+.donate-pill .pill-icon {
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.5);
+}
+
+/* Sub Theme (Neon Crimson) */
+.sub-pill {
+  border-left: 2.5px solid var(--neon-red);
+}
+.sub-pill .pill-icon {
+  background: rgba(255, 26, 75, 0.15);
+  color: var(--neon-red-bright);
+  text-shadow: 0 0 6px var(--neon-red-glow);
+}
+
+/* Pill Value Update Animation */
+.pill-updated {
+  animation: pillHighlight 0.6s ease;
+}
+
+@keyframes pillHighlight {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.6); }
+  100% { transform: scale(1); filter: brightness(1); }
+}

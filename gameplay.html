@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+  <title>DEC4LAND - Gameplay Overlay</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/gameplay.css">
+</head>
+<body class="gameplay-body">
+  <!-- HUD Container (100% transparent for game window) -->
+  <div class="gameplay-hud">
+
+    <!-- Webcam Module (Top-Left by default, matching reference) -->
+    <aside class="webcam-module pos-top-left" id="webcam-module">
+      
+      <!-- Frame Wrapper with Animated Cyber Glow -->
+      <div class="webcam-frame-wrapper">
+        
+        <!-- Animated Neon SVG Laser Border -->
+        <svg class="webcam-svg-border" width="100%" height="100%" viewBox="0 0 420 286" preserveAspectRatio="none">
+          <rect class="svg-border-track" x="1.5" y="1.5" width="417" height="283" rx="10"></rect>
+          <rect class="svg-border-laser" x="1.5" y="1.5" width="417" height="283" rx="10"></rect>
+        </svg>
+
+        <!-- 16:9 Webcam Window (100% Transparente para Câmera do OBS) -->
+        <div class="webcam-frame">
+          <div class="webcam-cutout"></div>
+
+          <!-- Tech Corner Brackets -->
+          <div class="cam-bracket cam-tl"></div>
+          <div class="cam-bracket cam-tr"></div>
+          <div class="cam-bracket cam-bl"></div>
+          <div class="cam-bracket cam-br"></div>
+
+          <!-- LIVE Status Badge -->
+          <div class="cam-live-badge">
+            <span class="live-dot"></span>
+            <span>LIVE</span>
+          </div>
+        </div>
+
+        <!-- Bottom Brand Bar: Animated DEC4LAND -->
+        <div class="webcam-brand-bar">
+          <div class="brand-left">
+            <div class="mini-mascot-ring">
+              <img src="assets/mascot.png" alt="DEC4LAND" class="mini-mascot-img">
+            </div>
+            <div class="brand-name-group">
+              <span class="streamer-name-animated">DEC4LAND</span>
+              <span class="brand-tagline">// STREAM NETWORK</span>
+            </div>
+          </div>
+
+          <div class="brand-right">
+            <span class="brand-social-pill">@DEC4LANDOFICIAL</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Small Event Labels: Último Follow, Último Donate, Último Sub -->
+      <div class="webcam-events-bar">
+        <!-- Último Follow -->
+        <div class="event-pill follow-pill" id="pill-follower">
+          <div class="pill-icon">★</div>
+          <div class="pill-body">
+            <span class="pill-tag">ÚLTIMO FOLLOW</span>
+            <span class="pill-val" id="latest-follower">-</span>
+          </div>
+        </div>
+
+        <!-- Último Donate -->
+        <div class="event-pill donate-pill" id="pill-donate">
+          <div class="pill-icon">💰</div>
+          <div class="pill-body">
+            <span class="pill-tag">ÚLTIMO DONATE</span>
+            <span class="pill-val" id="latest-donate">-</span>
+          </div>
+        </div>
+
+        <!-- Último Sub -->
+        <div class="event-pill sub-pill" id="pill-sub">
+          <div class="pill-icon">💎</div>
+          <div class="pill-body">
+            <span class="pill-tag">ÚLTIMO SUB</span>
+            <span class="pill-val" id="latest-sub">-</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <script src="js/gameplay.js"></script>
+</body>
+</html>

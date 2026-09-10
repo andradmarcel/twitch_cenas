@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/stinger.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 1920px;
+      height: 1080px;
+      background: transparent !important;
+      overflow: hidden;
+    }
+    .stinger-overlay {
+      display: block !important;
+    }
+  </style>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const ms = parseFloat(urlParams.get('ms') || '500');
+    const t = ms / 1000; // time in seconds
+
+    // Inject exact negative animation-delay to freeze all CSS animations at time t
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .stinger-animating .stinger-blade-1,
+      .stinger-animating .stinger-blade-2,
+      .stinger-animating .stinger-blade-3,
+      .stinger-animating .stinger-blade-4,
+      .stinger-animating .stinger-center-content,
+      .stinger-animating .stinger-flash,
+      .stinger-pulse-circle {
+        animation-delay: ${-t}s !important;
+        animation-play-state: paused !important;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</head>
+<body style="background: transparent;">
+  <div class="stinger-overlay active stinger-animating" id="overlay">
+    <div class="stinger-blade stinger-blade-1"></div>
+    <div class="stinger-blade stinger-blade-2"></div>
+    <div class="stinger-blade stinger-blade-3"></div>
+    <div class="stinger-blade stinger-blade-4"></div>
+    <div class="stinger-flash"></div>
+
+    <div class="stinger-center-content">
+      <div class="stinger-mascot-ring">
+        <div class="stinger-pulse-circle"></div>
+        <img src="assets/mascot.png" alt="DEC4LAND" class="stinger-mascot-img">
+      </div>
+      <div class="stinger-title-wrap">
+        <h2 class="stinger-title">DEC4LAND</h2>
+        <span class="stinger-tagline">// STREAM NETWORK</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
