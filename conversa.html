@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+  <title>DEC4LAND - Cena de Conversa (Just Chatting)</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/conversa.css">
+  <link rel="stylesheet" href="css/alerts.css">
+</head>
+<body>
+  <div class="scene-container" id="conversa-scene">
+    <!-- Twitch Alert Popup Layer -->
+    <div class="alert-container"></div>
+
+    <!-- Cyberpunk ambient background -->
+    <div class="cyber-grid"></div>
+    <canvas class="particles-canvas" id="particles-bg"></canvas>
+
+    <!-- Tech Corner Brackets -->
+    <div class="tech-bracket-tl"></div>
+    <div class="tech-bracket-tr">
+      <div class="tech-block-tr"></div>
+    </div>
+    <div class="tech-bracket-bl"></div>
+    <div class="tech-bracket-br"></div>
+
+    <!-- Main Scene Layout -->
+    <div class="conversa-layout">
+      
+      <!-- Top HUD Bar -->
+      <header class="conversa-top-hud">
+        <div class="hud-brand-group">
+          <h1 class="hud-brand-logo">DEC4LAND</h1>
+          <div class="hud-badge-divider"></div>
+          <div class="hud-scene-tag">
+            <span class="scene-tag-main">
+              <span>💬</span> BATE-PAPO & INTERAÇÃO
+            </span>
+            <span class="scene-tag-sub">// JUST CHATTING SCENE</span>
+          </div>
+        </div>
+
+        <div class="hud-center-status">
+          <div class="conversa-live-pill">
+            <span class="pulse-dot-live"></span>
+            <span>AO VIVO // FULL HD 60FPS</span>
+          </div>
+        </div>
+
+        <div class="hud-socials-group">
+          <div class="hud-social-item">
+            <span class="social-icon">𝕏</span>
+            <span>@DEC4LANDOFICIAL</span>
+          </div>
+          <div class="hud-social-item">
+            <span class="social-icon">📸</span>
+            <span>@ANDRADMARCEL</span>
+          </div>
+          <div class="hud-social-item">
+            <span class="social-icon">▶</span>
+            <span>/DEC4LAND</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Stage: Grande Webcam (Esquerda) + Chat da Live (Direita) -->
+      <main class="conversa-main-stage">
+        
+        <!-- Large Webcam Frame -->
+        <section class="webcam-column">
+          <div class="big-webcam-wrapper">
+            
+            <!-- Animated SVG Laser Border Running Continuously -->
+            <svg class="big-webcam-svg-border" width="100%" height="100%" viewBox="0 0 1340 760" preserveAspectRatio="none">
+              <rect class="big-svg-border-track" x="2" y="2" width="1336" height="756" rx="14"></rect>
+              <rect class="big-svg-border-laser" x="2" y="2" width="1336" height="756" rx="14"></rect>
+            </svg>
+
+            <!-- 16:9 Inner Webcam Frame (100% Transparente para Câmera do OBS) -->
+            <div class="big-webcam-cutout-frame">
+
+              <!-- Local Video for In-Browser Test Preview -->
+              <video id="browser-cam-video" class="browser-cam-video" autoplay playsinline muted></video>
+
+              <!-- In-OBS Camera Positioning Guide & In-Browser Test Trigger -->
+              <div class="obs-camera-guide" id="obs-camera-guide">
+                <div class="obs-guide-icon">📷</div>
+                <h3 class="obs-guide-title">ÁREA DA WEBCAM (PROPORÇÃO 16:9)</h3>
+                <p class="obs-guide-text">
+                  Esta área possui <strong>recorte 100% transparente</strong> no OBS Studio. Adicione sua fonte de <em>Dispositivo de Captura de Vídeo</em> em uma camada abaixo deste overlay para que sua câmera apareça perfeitamente emoldurada!
+                </p>
+                <button class="obs-guide-btn" id="btn-toggle-cam" onclick="toggleWebcamPreview()">
+                  Ligar Câmera para Teste no Navegador
+                </button>
+              </div>
+            </div>
+
+            <!-- Bottom Brand & Streamer Bar -->
+            <footer class="big-webcam-brand-bar">
+              <div class="big-brand-left">
+                <div class="mascot-avatar-circle">
+                  <img src="assets/mascot.png" alt="Mascote DEC4LAND">
+                </div>
+                <div class="streamer-name-wrapper">
+                  <span class="streamer-title" id="streamer-display-name">DEC4LAND</span>
+                  <span class="streamer-tagline">// STREAM NETWORK • ON AIR</span>
+                </div>
+              </div>
+
+              <div class="big-brand-right">
+                <div class="live-badge-box">
+                  <span class="pulse-dot-live"></span>
+                  <span>WEBCAM HD</span>
+                </div>
+                <div class="audio-eq-mini" title="Equalizador de Áudio">
+                  <span class="eq-bar"></span>
+                  <span class="eq-bar"></span>
+                  <span class="eq-bar"></span>
+                  <span class="eq-bar"></span>
+                  <span class="eq-bar"></span>
+                </div>
+              </div>
+            </footer>
+
+          </div>
+        </section>
+
+        <!-- Right Column: Live Chat Container -->
+        <aside class="chat-column">
+          <div class="chat-box-card">
+            
+            <!-- Chat Header -->
+            <div class="chat-header">
+              <div class="chat-title-group">
+                <span class="chat-icon-bubble">💬</span>
+                <div>
+                  <h2 class="chat-heading">CHAT DA LIVE</h2>
+                  <span class="chat-channel-badge" id="chat-channel-badge">#DEC4LAND</span>
+                </div>
+              </div>
+              <div class="chat-status-pill">
+                <span class="chat-status-dot"></span>
+                <span id="chat-status-text">CONECTANDO...</span>
+              </div>
+            </div>
+
+            <!-- Chat Messages Viewport (Auto-scrolls & Limits to 50 items) -->
+            <div class="chat-messages-viewport" id="chat-messages-viewport"></div>
+
+            <!-- Chat Footer with Simulator Action -->
+            <div class="chat-footer">
+              <span class="chat-footer-tip">Dica: Tecle 'C' para simular chat</span>
+              <button class="chat-test-btn" onclick="simulateChatMessage()">
+                + Simular Mensagem
+              </button>
+            </div>
+
+          </div>
+        </aside>
+
+      </main>
+
+      <!-- Bottom Event Bar & Sub/Follow Goal -->
+      <footer class="conversa-bottom-bar">
+        
+        <!-- Live Event Indicators -->
+        <div class="event-pills-row">
+          <!-- Último Follow -->
+          <div class="conversa-pill" id="pill-follower">
+            <div class="conversa-pill-icon pill-icon-follow">★</div>
+            <div class="conversa-pill-text">
+              <span class="conversa-pill-label">ÚLTIMO FOLLOW</span>
+              <span class="conversa-pill-val" id="pill-val-follower">-</span>
+            </div>
+          </div>
+
+          <!-- Último Donate / Pix -->
+          <div class="conversa-pill" id="pill-donate">
+            <div class="conversa-pill-icon pill-icon-donate">💰</div>
+            <div class="conversa-pill-text">
+              <span class="conversa-pill-label">ÚLTIMO DONATE / PIX</span>
+              <span class="conversa-pill-val" id="pill-val-donate">-</span>
+            </div>
+          </div>
+
+          <!-- Último Sub -->
+          <div class="conversa-pill" id="pill-sub">
+            <div class="conversa-pill-icon pill-icon-sub">💎</div>
+            <div class="conversa-pill-text">
+              <span class="conversa-pill-label">ÚLTIMO SUB</span>
+              <span class="conversa-pill-val" id="pill-val-sub">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Follower/Sub Goal Widget -->
+        <div class="sub-goal-box">
+          <div class="goal-header">
+            <span class="goal-title" id="goal-title-text">META DE SEGUIDORES</span>
+            <span class="goal-count" id="goal-count-text">340 / 500</span>
+          </div>
+          <div class="goal-track">
+            <div class="goal-progress" id="goal-progress-bar"></div>
+          </div>
+        </div>
+
+      </footer>
+
+    </div>
+  </div>
+
+  <!-- Scene Scripts -->
+  <script src="js/particles.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/conversa.js"></script>
+  <script>
+    // Initialize cyber background particles
+    document.addEventListener('DOMContentLoaded', () => {
+      new CyberParticles('particles-bg');
+    });
+  </script>
+</body>
+</html>

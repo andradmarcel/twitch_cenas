@@ -98,7 +98,40 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
 
 ---
 
-### 4. 🏁 Encerramento de Live (`ending.html`)
+### 4. 💬 Cena de Conversa / Just Chatting (`conversa.html`)
+- **Resolução**: 1920x1080 Full HD
+- **Fundo**: Deep Wine com grade cibernética e partículas dinâmicas
+- **Recursos**:
+  - **Grande Moldura de Webcam 16:9**:
+    - Ocupa o centro-esquerda com proporção exata para webcam widescreen.
+    - Laser animado contínuo em SVG com glow carmesim e cantoneiras cibernéticas.
+    - Recorte interno 100% transparente para encaixe direto da câmera no OBS.
+    - Rodapé da câmera com mini mascote, nome do streamer, badge LIVE e mini equalizador sonoro.
+    - Botão interativo para testar a webcam direto no navegador com 1 clique (`navigator.mediaDevices.getUserMedia`).
+  - **Coluna Lateral de Chat da Twitch em Tempo Real**:
+    - Conecta diretamente aos servidores da Twitch (`wss://irc-ws.chat.twitch.tv:443`).
+    - Renderiza badges oficiais (Streamer, Mod, VIP, Sub, Prime).
+    - Suporte a cores de nomes e emotes oficiais da Twitch.
+    - Animação suave de entrada das mensagens e autoscroll inteligente.
+    - Destaque especial para mensagens de Inscritos, Doações com Bits e Streamer.
+    - Modo de simulação (`?mock=true` ou tecla `C`) com mensagens realistas de teste.
+  - **Letreiros Inferiores e Meta de Seguidores**:
+    - Último Follow, Último Donate/Pix e Último Sub em tempo real.
+    - Barra de progresso neon da Meta de Seguidores/Subs personalizável via URL.
+  - **Camada de Alertas Embutida**:
+    - Dispara notificações sonoras e visuais sincronizadas para subs, donates, follows e raids.
+- **Parâmetros personalizáveis via URL**:
+  - `conversa.html?channel=dec4land` (define o canal da Twitch para conectar ao chat)
+  - `conversa.html?name=DEC4LAND` (define o nome na barra da webcam)
+  - `conversa.html?mock=true` (ativa rotação contínua de chat simulado)
+  - `conversa.html?goal=500&current=340&goal_title=META+DE+SUBS` (personaliza a barra de meta)
+- **Atalhos de Teclado**:
+  - `C`: Simular nova mensagem no chat
+  - `V`: Ligar / Desligar webcam de teste no navegador
+
+---
+
+### 5. 🏁 Encerramento de Live (`ending.html`)
 - **Resolução**: 1920x1080 Full HD
 - **Recursos**:
   - Título principal **MUITO OBRIGADO! // LIVE FINALIZADA**.
@@ -116,22 +149,25 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
 ### Configuração Recomendada (Browser Source / Navegador):
 
 1. Abra o **OBS Studio**.
-2. No quadro **Cenas**, crie ou selecione uma cena (ex: `Live Começando`).
+2. No quadro **Cenas**, crie ou selecione uma cena (ex: `Conversa`).
 3. No quadro **Fontes**, clique no botão **`+`** e selecione **Navegador (Browser)**.
-4. Nomeie a fonte (ex: `Overlay Começando`) e clique em **OK**.
+4. Nomeie a fonte (ex: `Overlay Conversa`) e clique em **OK**.
 5. Na janela de propriedades:
    - Marque a caixa **Arquivo local** e clique em **Localizar**.
-   - Selecione o arquivo `starting.html` da pasta `twitch_cenas`.
+   - Selecione o arquivo `conversa.html` (ou `gameplay.html` / `starting.html`) da pasta `twitch_cenas`.
    - Defina **Largura: `1920`**
    - Defina **Altura: `1080`**
    - Marque: **"Desativar fonte quando não visível"** e **"Atualizar o navegador quando a cena se tornar ativa"**.
 6. Clique em **OK**.
 
-### Para a Cena de Gameplay:
-1. Adicione a fonte do **Navegador** apontando para `gameplay.html` (1920x1080).
-2. Adicione sua **Captura de Jogo** (ou Captura de Janela/Tela).
-3. Adicione seu **Dispositivo de Captura de Vídeo** (sua Webcam).
-4. No painel **Fontes**, ordene as camadas de cima para baixo:
-   - 🔝 **Overlay Gameplay** (Navegador) - *no topo*
-   - 📷 **Webcam** - *ajustada dentro da moldura da câmera no canto superior direito*
-   - 🎮 **Captura de Jogo** - *no fundo*
+### Ordem de Camadas Recomendada no OBS:
+
+#### Para a Cena de Conversa (`conversa.html`):
+1. 🔝 **Overlay Conversa** (Navegador 1920x1080) - *no topo*
+2. 📷 **Dispositivo de Captura de Vídeo** (sua Webcam) - *posicionada na moldura grande à esquerda*
+
+#### Para a Cena de Gameplay (`gameplay.html`):
+1. 🔝 **Overlay Gameplay** (Navegador 1920x1080) - *no topo*
+2. 📷 **Webcam** - *ajustada dentro da moldura da câmera*
+3. 🎮 **Captura de Jogo** - *no fundo*
+

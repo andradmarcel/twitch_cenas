@@ -577,6 +577,9 @@
         <button class="tab-btn" onclick="switchScene('ending')">
           <span>04.</span> ENCERRAMENTO
         </button>
+        <button class="tab-btn" onclick="switchScene('conversa')">
+          <span>05.</span> CONVERSA / CHAT
+        </button>
       </div>
     </header>
 
@@ -699,6 +702,9 @@
           <button class="alert-btn btn-raid" onclick="triggerTestAlert('raid')">
             <span>🚨</span> Testar Raid
           </button>
+          <button class="alert-btn" style="background: rgba(255, 26, 75, 0.2); border-color: var(--neon-red);" onclick="triggerSimulateChatFromHub()">
+            <span>💬</span> Testar Chat (Conversa)
+          </button>
         </div>
       </div>
     </section>
@@ -747,6 +753,17 @@
         <h3 class="card-title">ENCERRAMENTO</h3>
         <p class="card-desc">Tela de despedida com agradecimentos, cards destacados do Twitter, Instagram e YouTube para converter viewers em seguidores.</p>
         <div class="card-obs-url" id="url-ending">ending.html</div>
+      </div>
+
+      <!-- Conversa / Chat Card -->
+      <div class="scene-card">
+        <div class="card-top">
+          <span class="card-tag">CENA 05</span>
+          <a href="conversa.html" target="_blank" class="action-btn">Abrir</a>
+        </div>
+        <h3 class="card-title">CONVERSA / CHAT</h3>
+        <p class="card-desc">Cena Just Chatting com webcam 16:9 em grande destaque, recorte transparente para o OBS e chat lateral da Twitch em tempo real.</p>
+        <div class="card-obs-url" id="url-conversa">conversa.html</div>
       </div>
 
       <!-- Standalone Alerts Card -->
@@ -891,6 +908,14 @@
       const brbEl = document.getElementById('url-brb');
       if (brbEl) brbEl.textContent = base + 'brb.html';
       document.getElementById('url-ending').textContent = base + 'ending.html';
+      const conversaEl = document.getElementById('url-conversa');
+      if (conversaEl) {
+        let conversaUrl = base + 'conversa.html?channel=' + encodeURIComponent(currentChannel);
+        if (sF) conversaUrl += '&follow=' + encodeURIComponent(sF);
+        if (sD) conversaUrl += '&donate=' + encodeURIComponent(sD);
+        if (sS) conversaUrl += '&sub=' + encodeURIComponent(sS);
+        conversaEl.textContent = conversaUrl;
+      }
       const alertsEl = document.getElementById('url-alerts');
       if (alertsEl) alertsEl.textContent = base + 'alerts.html';
       const stingerEl = document.getElementById('url-stinger');
@@ -941,12 +966,26 @@
       localStorage.setItem('dec4land_twitch_channel', currentChannel);
       updateCardUrls();
 
-      // If currently previewing gameplay, reload with new channel
-      if (currentScene === 'gameplay') {
-        iframe.src = 'gameplay.html?channel=' + encodeURIComponent(currentChannel);
-        btnFullscreen.href = 'gameplay.html?channel=' + encodeURIComponent(currentChannel);
+      // If currently previewing gameplay or conversa, reload with new channel
+      if (currentScene === 'gameplay' || currentScene === 'conversa') {
+        iframe.src = currentScene + '.html?channel=' + encodeURIComponent(currentChannel);
+        btnFullscreen.href = currentScene + '.html?channel=' + encodeURIComponent(currentChannel);
       }
       alert('Canal definido como: ' + currentChannel + '\nO overlay agora está conectado aos eventos da Twitch deste canal!');
+    }
+
+    function triggerSimulateChatFromHub() {
+      if (iframe && iframe.contentWindow && iframe.contentWindow.simulateChatMessage) {
+        iframe.contentWindow.simulateChatMessage();
+      } else {
+        // Switch to conversa scene and simulate
+        switchScene('conversa');
+        setTimeout(() => {
+          if (iframe && iframe.contentWindow && iframe.contentWindow.simulateChatMessage) {
+            iframe.contentWindow.simulateChatMessage();
+          }
+        }, 1200);
+      }
     }
 
     window.addEventListener('resize', resizeIframe);
@@ -1014,13 +1053,20 @@
         mockGame.style.display = 'none';
         titleEl.textContent = 'CENA: ENCERRAMENTO DE LIVE (1920x1080 Full HD)';
         btnFullscreen.href = 'ending.html';
+      } else if (sceneName === 'conversa') {
+        const btn = document.querySelector('.tab-btn:nth-child(5)');
+        if (btn) btn.classList.add('active');
+        iframe.src = 'conversa.html?channel=' + encodeURIComponent(currentChannel);
+        mockGame.style.display = 'none';
+        titleEl.textContent = 'CENA: CONVERSA / JUST CHATTING (Twitch #' + currentChannel.toUpperCase() + ')';
+        btnFullscreen.href = 'conversa.html?channel=' + encodeURIComponent(currentChannel);
       }
     }
 
     function copyCurrentSceneUrl() {
       const base = getBaseUrl();
       let targetUrl = base + currentScene + '.html';
-      if (currentScene === 'gameplay') {
+      if (currentScene === 'gameplay' || currentScene === 'conversa') {
         targetUrl += '?channel=' + encodeURIComponent(currentChannel);
       }
       navigator.clipboard.writeText(targetUrl).then(() => {
