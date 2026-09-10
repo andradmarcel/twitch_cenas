@@ -7,15 +7,32 @@
   <link rel="stylesheet" href="css/shared.css">
   <link rel="stylesheet" href="css/conversa.css">
   <link rel="stylesheet" href="css/alerts.css">
+  <script src="config.js"></script>
 </head>
-<body>
-  <div class="scene-container" id="conversa-scene">
+<body class="conversa-body">
+
+  <!-- SVG Mask: Recorte 100% transparente para a webcam do OBS Studio aparecer por trás da cena -->
+  <svg width="0" height="0" style="position: absolute; pointer-events: none;">
+    <defs>
+      <mask id="webcam-cutout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080">
+        <!-- Retângulo branco: Fundo cibernético visível em toda a tela -->
+        <rect x="0" y="0" width="1920" height="1080" fill="#ffffff" />
+        <!-- Retângulo preto: Janela da webcam 100% transparente através do overlay -->
+        <rect id="webcam-mask-hole" x="40" y="135" width="1330" height="756" rx="14" fill="#000000" />
+      </mask>
+    </defs>
+  </svg>
+
+  <div class="scene-container conversa-scene-container" id="conversa-scene">
     <!-- Twitch Alert Popup Layer -->
     <div class="alert-container"></div>
 
-    <!-- Cyberpunk ambient background -->
-    <div class="cyber-grid"></div>
-    <canvas class="particles-canvas" id="particles-bg"></canvas>
+    <!-- Camada de Fundo Cibernético (Mascarada para furar o buraco da webcam) -->
+    <div class="conversa-ambient-layer">
+      <div class="conversa-ambient-gradient"></div>
+      <div class="cyber-grid"></div>
+      <canvas class="particles-canvas" id="particles-bg"></canvas>
+    </div>
 
     <!-- Tech Corner Brackets -->
     <div class="tech-bracket-tl"></div>
@@ -51,15 +68,15 @@
         <div class="hud-socials-group">
           <div class="hud-social-item">
             <span class="social-icon">𝕏</span>
-            <span>@DEC4LANDOFICIAL</span>
+            <span id="social-twitter">@DEC4LANDOFICIAL</span>
           </div>
           <div class="hud-social-item">
             <span class="social-icon">📸</span>
-            <span>@ANDRADMARCEL</span>
+            <span id="social-instagram">@ANDRADMARCEL</span>
           </div>
           <div class="hud-social-item">
             <span class="social-icon">▶</span>
-            <span>/DEC4LAND</span>
+            <span id="social-youtube">/DEC4LAND</span>
           </div>
         </div>
       </header>
@@ -67,7 +84,7 @@
       <!-- Main Stage: Grande Webcam (Esquerda) + Chat da Live (Direita) -->
       <main class="conversa-main-stage">
         
-        <!-- Large Webcam Frame -->
+        <!-- Large Webcam Frame (100% Transparente para a Câmera no OBS) -->
         <section class="webcam-column">
           <div class="big-webcam-wrapper">
             
@@ -77,23 +94,9 @@
               <rect class="big-svg-border-laser" x="2" y="2" width="1336" height="756" rx="14"></rect>
             </svg>
 
-            <!-- 16:9 Inner Webcam Frame (100% Transparente para Câmera do OBS) -->
-            <div class="big-webcam-cutout-frame">
-
-              <!-- Local Video for In-Browser Test Preview -->
-              <video id="browser-cam-video" class="browser-cam-video" autoplay playsinline muted></video>
-
-              <!-- In-OBS Camera Positioning Guide & In-Browser Test Trigger -->
-              <div class="obs-camera-guide" id="obs-camera-guide">
-                <div class="obs-guide-icon">📷</div>
-                <h3 class="obs-guide-title">ÁREA DA WEBCAM (PROPORÇÃO 16:9)</h3>
-                <p class="obs-guide-text">
-                  Esta área possui <strong>recorte 100% transparente</strong> no OBS Studio. Adicione sua fonte de <em>Dispositivo de Captura de Vídeo</em> em uma camada abaixo deste overlay para que sua câmera apareça perfeitamente emoldurada!
-                </p>
-                <button class="obs-guide-btn" id="btn-toggle-cam" onclick="toggleWebcamPreview()">
-                  Ligar Câmera para Teste no Navegador
-                </button>
-              </div>
+            <!-- 16:9 Inner Webcam Frame (100% Transparente e Desobstruído para Câmera do OBS) -->
+            <div class="big-webcam-cutout-frame" id="big-webcam-cutout-frame">
+              <!-- Janela totalmente limpa e transparente: a webcam do OBS fica visível aqui -->
             </div>
 
             <!-- Bottom Brand & Streamer Bar -->
@@ -126,7 +129,7 @@
           </div>
         </section>
 
-        <!-- Right Column: Live Chat Container -->
+        <!-- Right Column: Live Chat Container (Twitch Real Time) -->
         <aside class="chat-column">
           <div class="chat-box-card">
             
@@ -145,12 +148,17 @@
               </div>
             </div>
 
-            <!-- Chat Messages Viewport (Auto-scrolls & Limits to 50 items) -->
-            <div class="chat-messages-viewport" id="chat-messages-viewport"></div>
+            <!-- Chat Messages Viewport -->
+            <div class="chat-messages-viewport" id="chat-messages-viewport">
+              <div class="chat-empty-notice" id="chat-empty-notice">
+                <span class="empty-icon">💬</span>
+                <span class="empty-text">Aguardando mensagens do chat da Twitch...</span>
+              </div>
+            </div>
 
-            <!-- Chat Footer with Simulator Action -->
+            <!-- Chat Footer -->
             <div class="chat-footer">
-              <span class="chat-footer-tip">Dica: Tecle 'C' para simular chat</span>
+              <span class="chat-footer-tip">Conectado via WebSocket</span>
               <button class="chat-test-btn" onclick="simulateChatMessage()">
                 + Simular Mensagem
               </button>

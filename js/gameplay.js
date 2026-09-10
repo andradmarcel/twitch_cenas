@@ -198,8 +198,8 @@
     }, 9000);
   }
 
-  // Twitch Channel WebSocket IRC listener (anonymous read-only real live stream events)
-  const twitchChannel = (urlParams.get('channel') || localStorage.getItem('dec4land_twitch_channel') || 'dec4land').toLowerCase().replace(/^@|^#/, '');
+  const cfg = window.DEC4LAND_CONFIG || {};
+  const twitchChannel = (urlParams.get('channel') || cfg.twitchChannel || localStorage.getItem('dec4land_twitch_channel') || 'dec4land').toLowerCase().replace(/^@|^#/, '');
 
   function parseIrcTags(rawTags) {
     const tags = {};

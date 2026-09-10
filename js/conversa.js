@@ -1,26 +1,54 @@
 // DEC4LAND Conversa (Just Chatting) Controller
-// Real-time Twitch Chat IRC WebSocket, Badges, Emotes, Events & Camera Helper
+// Real-time Twitch Chat IRC WebSocket, Badges, Emotes, Events & 100% OBS Cutout Sync
 (function() {
   const urlParams = new URLSearchParams(window.location.search);
 
-  // Config parameters
-  const channelParam = urlParams.get('channel') || localStorage.getItem('dec4land_twitch_channel') || 'dec4land';
+  // Configuration from URL > config.js > localStorage > fallback
+  const cfg = window.DEC4LAND_CONFIG || {};
+  const channelParam = urlParams.get('channel') || cfg.twitchChannel || localStorage.getItem('dec4land_twitch_channel') || 'dec4land';
   const twitchChannel = channelParam.toLowerCase().replace(/^@|^#/, '');
-  const streamerName = urlParams.get('name') || localStorage.getItem('dec4land_streamer_name') || 'DEC4LAND';
-  const socialHandle = urlParams.get('social') || localStorage.getItem('dec4land_social_handle') || '@DEC4LANDOFICIAL';
+  const streamerName = urlParams.get('name') || cfg.streamerName || localStorage.getItem('dec4land_streamer_name') || 'DEC4LAND';
+  const socialTwitter = urlParams.get('twitter') || cfg.socialTwitter || '@DEC4LANDOFICIAL';
+  const socialInstagram = urlParams.get('instagram') || cfg.socialInstagram || '@ANDRADMARCEL';
+  const socialYoutube = urlParams.get('youtube') || cfg.socialYoutube || '/DEC4LAND';
   const allowMock = urlParams.get('mock') === 'true';
 
   // Apply names & branding
   const nameEl = document.getElementById('streamer-display-name');
   if (nameEl) nameEl.textContent = streamerName;
 
-  const socialEls = document.querySelectorAll('.hud-social-item');
-  if (socialEls.length > 0 && socialHandle) {
-    socialEls[0].innerHTML = `<span class="social-icon">𝕏</span> ${socialHandle}`;
-  }
+  const twEl = document.getElementById('social-twitter');
+  if (twEl) twEl.textContent = socialTwitter;
+  const igEl = document.getElementById('social-instagram');
+  if (igEl) igEl.textContent = socialInstagram;
+  const ytEl = document.getElementById('social-youtube');
+  if (ytEl) ytEl.textContent = socialYoutube;
 
   const channelBadgeEl = document.getElementById('chat-channel-badge');
-  if (channelBadgeEl) channelBadgeEl.textContent = `#${twitchChannel}`;
+  if (channelBadgeEl) channelBadgeEl.textContent = `#${twitchChannel.toUpperCase()}`;
+
+  // ==========================================================================
+  // WEBCAM 100% TRANSPARENT CUTOUT HOLE SYNCHRONIZATION
+  // ==========================================================================
+  function syncMaskHole() {
+    const frame = document.getElementById('big-webcam-cutout-frame');
+    const hole = document.getElementById('webcam-mask-hole');
+    if (frame && hole) {
+      const r = frame.getBoundingClientRect();
+      // Use exact coordinates of the cutout window
+      hole.setAttribute('x', Math.round(r.left));
+      hole.setAttribute('y', Math.round(r.top));
+      hole.setAttribute('width', Math.round(r.width));
+      hole.setAttribute('height', Math.round(r.height));
+    }
+  }
+
+  window.addEventListener('resize', syncMaskHole);
+  window.addEventListener('DOMContentLoaded', syncMaskHole);
+  window.addEventListener('load', syncMaskHole);
+  requestAnimationFrame(syncMaskHole);
+  setTimeout(syncMaskHole, 150);
+  setTimeout(syncMaskHole, 600);
 
   // ==========================================================================
   // EVENT PILLS (Follower, Donate, Sub)
@@ -29,9 +57,9 @@
   const donateEl = document.getElementById('pill-val-donate');
   const subEl = document.getElementById('pill-val-sub');
 
-  const realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower') || 'andre_pro';
-  const realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || 'Lucas (R$ 25,00)';
-  const realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || 'Bia (3m)';
+  const realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower') || '-';
+  const realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || '-';
+  const realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || '-';
 
   if (followerEl) followerEl.textContent = realFollower;
   if (donateEl) donateEl.textContent = realDonate;
@@ -99,7 +127,6 @@
           else if (type === 'sub' || type === 'resub') window.updateSub(p.user, p.months);
           else if (type === 'bits' || type === 'cheer') window.updateDonate(p.user, `${p.amount || 100} bits`);
 
-          // Trigger screen alert if alerts engine is loaded
           if (window.triggerTwitchAlert) {
             window.triggerTwitchAlert(p);
           }
@@ -119,11 +146,12 @@
   });
 
   // ==========================================================================
-  // TWITCH CHAT ENGINE (WebSocket IRC)
+  // REAL-TIME TWITCH CHAT ENGINE (WebSocket IRC)
   // ==========================================================================
   const chatViewport = document.getElementById('chat-messages-viewport');
   const chatStatusText = document.getElementById('chat-status-text');
-  const MAX_MESSAGES = 50;
+  const chatEmptyNotice = document.getElementById('chat-empty-notice');
+  const MAX_MESSAGES = 60;
 
   function parseIrcTags(rawTags) {
     const tags = {};
@@ -135,11 +163,9 @@
     return tags;
   }
 
-  // Parse Twitch Emotes in text
   function formatEmotes(text, emotesTag) {
     if (!emotesTag) return escapeHtml(text);
 
-    // Emotes format: emoteId:start-end,start-end/emoteId2:start-end
     const replacements = [];
     const emoteParts = emotesTag.split('/');
     emoteParts.forEach(part => {
@@ -178,13 +204,18 @@
   window.addChatMessage = function(options) {
     if (!chatViewport) return;
 
+    // Hide the empty notice once messages start coming in
+    if (chatEmptyNotice && chatEmptyNotice.parentNode) {
+      chatEmptyNotice.style.display = 'none';
+    }
+
     const {
       user = 'Viewer',
       color = '',
       badges = [],
       message = '',
       emotes = '',
-      highlight = '', // 'broadcaster', 'sub', 'bits'
+      highlight = '',
       time = null
     } = options;
 
@@ -198,15 +229,15 @@
     let badgesHtml = '';
     badges.forEach(b => {
       const bKey = b.toLowerCase();
-      if (bKey.includes('broadcaster')) {
+      if (bKey.startsWith('broadcaster')) {
         badgesHtml += '<span class="chat-badge badge-broadcaster">STREAMER</span>';
-      } else if (bKey.includes('moderator')) {
+      } else if (bKey.startsWith('moderator')) {
         badgesHtml += '<span class="chat-badge badge-mod">MOD</span>';
-      } else if (bKey.includes('vip')) {
+      } else if (bKey.startsWith('vip')) {
         badgesHtml += '<span class="chat-badge badge-vip">VIP</span>';
-      } else if (bKey.includes('subscriber')) {
+      } else if (bKey.startsWith('subscriber')) {
         badgesHtml += '<span class="chat-badge badge-sub">SUB</span>';
-      } else if (bKey.includes('prime')) {
+      } else if (bKey.startsWith('prime')) {
         badgesHtml += '<span class="chat-badge badge-prime">PRIME</span>';
       }
     });
@@ -227,7 +258,9 @@
 
     // Prune old messages
     while (chatViewport.children.length > MAX_MESSAGES) {
-      chatViewport.removeChild(chatViewport.firstChild);
+      const first = chatViewport.firstChild;
+      if (first === chatEmptyNotice) break;
+      chatViewport.removeChild(first);
     }
 
     // Smooth scroll down
@@ -255,12 +288,14 @@
       twitchSocket.onmessage = function(e) {
         const lines = e.data.split('\r\n');
         lines.forEach(line => {
+          if (!line) return;
+
           if (line.startsWith('PING')) {
             twitchSocket.send('PONG :tmi.twitch.tv');
             return;
           }
 
-          // Handle PRIVMSG (Live chat message)
+          // Handle PRIVMSG (Live Twitch chat message)
           if (line.includes(' PRIVMSG ')) {
             let tags = {};
             let rest = line;
@@ -272,9 +307,16 @@
 
             const colonIdx = rest.indexOf(' :');
             const messageText = colonIdx !== -1 ? rest.substring(colonIdx + 2) : '';
-            const user = tags['display-name'] || tags['login'] || 'Viewer';
+
+            // Extract username: from display-name or login in IRC prefix
+            let user = tags['display-name'];
+            if (!user) {
+              const match = rest.match(/^:([^!@\s]+)/);
+              user = match ? match[1] : 'Viewer';
+            }
+
             const color = tags['color'] || '';
-            const rawBadges = (tags['badges'] || '').split(',');
+            const rawBadges = (tags['badges'] || '').split(',').filter(Boolean);
             const emotesTag = tags['emotes'] || '';
 
             let highlight = '';
@@ -295,12 +337,18 @@
           // Handle USERNOTICE (Subscriptions / Raids)
           if (line.includes(' USERNOTICE ')) {
             let tags = {};
+            let rest = line;
             if (line.startsWith('@')) {
               const sp = line.indexOf(' ');
               tags = parseIrcTags(line.substring(1, sp));
+              rest = line.substring(sp + 1);
             }
             const msgId = tags['msg-id'] || '';
-            const user = tags['display-name'] || tags['login'] || 'Viewer';
+            let user = tags['display-name'];
+            if (!user) {
+              const match = rest.match(/^:([^!@\s]+)/);
+              user = match ? match[1] : 'Viewer';
+            }
             const months = tags['msg-param-cumulative-months'] || '1';
 
             if (msgId === 'sub' || msgId === 'resub') {
@@ -309,7 +357,7 @@
                 user: 'DEC4LAND SYSTEM',
                 color: '#ffb800',
                 badges: ['subscriber'],
-                message: `🎉 ${user} acabou de assinar o canal (${months} meses)! Bem-vindo(a) ao clube!`,
+                message: `🎉 ${user} assinou o canal (${months} meses)!`,
                 highlight: 'sub'
               });
             } else if (msgId === 'raid') {
@@ -318,7 +366,7 @@
                 user: 'DEC4LAND SYSTEM',
                 color: '#00d2ff',
                 badges: ['broadcaster'],
-                message: `🚀 RAID INCOMING! ${user} chegou com ${viewers} espectadores!`,
+                message: `🚀 RAID! ${user} chegou com ${viewers} espectadores!`,
                 highlight: 'broadcaster'
               });
             }
@@ -327,12 +375,12 @@
       };
 
       twitchSocket.onerror = function() {
-        if (chatStatusText) chatStatusText.textContent = 'ERRO DE CONEXÃO';
+        if (chatStatusText) chatStatusText.textContent = 'RECONECTANDO...';
       };
 
       twitchSocket.onclose = function() {
         if (chatStatusText) chatStatusText.textContent = 'RECONECTANDO...';
-        setTimeout(connectTwitchChat, 7000);
+        setTimeout(connectTwitchChat, 5000);
       };
 
     } catch (err) {
@@ -343,7 +391,7 @@
   connectTwitchChat();
 
   // ==========================================================================
-  // SIMULATOR / MOCK CHAT MESSAGES
+  // SIMULATOR / MOCK CHAT MESSAGES (ONLY TRIGGERS ON DEMAND OR ?mock=true)
   // ==========================================================================
   const sampleChatters = [
     { name: 'pedro_gamer', color: '#00d2ff', badges: ['subscriber'], msg: 'Boa tarde rapaziada! Live tá braba hoje 🔥' },
@@ -351,9 +399,7 @@
     { name: 'lucas_fps', color: '#ffb800', badges: ['moderator'], msg: 'Chat na moral hoje hein tropa, sem spam!' },
     { name: 'carlos_pro', color: '#70d6ff', badges: ['subscriber'], msg: 'Essa cena de conversa ficou absurda demais 👏' },
     { name: 'vanessa_stream', color: '#e0aaff', badges: ['subscriber'], msg: 'Salve salve! Bora que hoje promete!' },
-    { name: 'thiago_tech', color: '#00ff7f', badges: [], msg: 'Qual vai ser o jogo de hoje depois da resenha?' },
-    { name: 'gabriel_99', color: '#ff9e00', badges: ['subscriber'], msg: 'Alô alô Dec4land! Melhor live da Twitch 🚀' },
-    { name: 'marina_rj', color: '#f72585', badges: ['vip'], msg: 'Cadê o mascote bombado na tela? kkkk' }
+    { name: 'thiago_tech', color: '#00ff7f', badges: [], msg: 'Qual vai ser o jogo de hoje depois da resenha?' }
   ];
 
   let sampleIndex = 0;
@@ -369,71 +415,17 @@
     });
   };
 
-  // Initial welcome message
-  setTimeout(() => {
-    window.addChatMessage({
-      user: 'DEC4LAND BOT',
-      color: '#ff1a4b',
-      badges: ['broadcaster'],
-      message: `Bem-vindo(a) à cena de conversa! Conectado ao canal #${twitchChannel}. Interaja pelo chat da Twitch!`,
-      highlight: 'broadcaster'
-    });
-    // Add 2 initial friendly mock messages for immediate nice preview
-    setTimeout(window.simulateChatMessage, 800);
-    setTimeout(window.simulateChatMessage, 1600);
-  }, 500);
-
-  // If mock mode is active, simulate continuous chat
+  // Continuous mock rotation ONLY if explicitly requested via ?mock=true
   if (allowMock) {
     setInterval(() => {
       window.simulateChatMessage();
     }, 6500);
   }
 
-  // ==========================================================================
-  // IN-BROWSER WEBCAM TEST HELPER (TEST WEBCAM DIRECTLY IN BROWSER)
-  // ==========================================================================
-  let localMediaStream = null;
-  const videoEl = document.getElementById('browser-cam-video');
-  const guideBox = document.getElementById('obs-camera-guide');
-
-  window.toggleWebcamPreview = async function() {
-    if (localMediaStream) {
-      // Turn off
-      localMediaStream.getTracks().forEach(t => t.stop());
-      localMediaStream = null;
-      if (videoEl) videoEl.style.display = 'none';
-      if (guideBox) guideBox.style.display = 'flex';
-      const btn = document.getElementById('btn-toggle-cam');
-      if (btn) btn.textContent = 'Ligar Câmera para Teste';
-    } else {
-      // Turn on
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false
-        });
-        localMediaStream = stream;
-        if (videoEl) {
-          videoEl.srcObject = stream;
-          videoEl.play();
-          videoEl.style.display = 'block';
-        }
-        if (guideBox) guideBox.style.display = 'none';
-        const btn = document.getElementById('btn-toggle-cam');
-        if (btn) btn.textContent = 'Desligar Câmera de Teste';
-      } catch (err) {
-        alert('Não foi possível acessar a webcam no navegador. Certifique-se de permitir o acesso nas permissões do navegador.\n\nNo OBS Studio, lembre-se que a sua câmera é adicionada normalmente como uma fonte de Dispositivo de Captura de Vídeo atrás desta moldura!');
-      }
-    }
-  };
-
-  // Keyboard shortcut: 'C' to simulate chat message, 'V' to toggle webcam
+  // Keyboard shortcut: 'C' to simulate chat message
   window.addEventListener('keydown', (e) => {
     if (e.key === 'c' || e.key === 'C') {
       window.simulateChatMessage();
-    } else if (e.key === 'v' || e.key === 'V') {
-      window.toggleWebcamPreview();
     }
   });
 

@@ -1,7 +1,54 @@
 /* ==========================================================================
    DEC4LAND - CENA DE CONVERSA (JUST CHATTING) STYLES
-   1920x1080 Full HD Layout - Webcam Grande + Chat Lateral
+   1920x1080 Full HD Layout - Webcam Grande (Recorte 100% Transparente para OBS) + Chat Lateral
    ========================================================================== */
+
+/* Body & Scene Container: 100% transparent to allow OBS sources behind */
+body.conversa-body {
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+.conversa-scene-container {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent !important;
+  background-color: transparent !important;
+  animation: none !important;
+}
+
+/* Ambient Background Layer with SVG Mask:
+   Draws cyberpunk gradient, grid and particles everywhere EXCEPT the webcam cutout hole */
+.conversa-ambient-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+  z-index: 1;
+  mask: url(#webcam-cutout-mask);
+  -webkit-mask: url(#webcam-cutout-mask);
+}
+
+.conversa-ambient-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 12% 15%, var(--bg-blue-tint) 0%, transparent 45%),
+    radial-gradient(circle at 75% 40%, var(--bg-wine-bright) 0%, var(--bg-wine-mid) 40%, var(--bg-deep) 90%);
+}
 
 /* Main Scene Layout */
 .conversa-layout {
@@ -200,7 +247,7 @@
   to { stroke-dashoffset: 0; }
 }
 
-/* 16:9 Inner Transparent Cutout */
+/* 16:9 Inner Transparent Cutout Frame (100% CLEAN FOR OBS CAMERA SOURCE) */
 .big-webcam-cutout-frame {
   position: relative;
   width: 100%;
@@ -211,81 +258,6 @@
   overflow: hidden;
   border: 1.5px solid rgba(255, 26, 75, 0.4);
   border-bottom: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* In-Cutout Placeholder & Browser Webcam Test */
-.obs-camera-guide {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: rgba(14, 3, 10, 0.45);
-  border: 1.5px dashed rgba(255, 26, 75, 0.3);
-  border-radius: 10px;
-  width: 85%;
-  height: 80%;
-  transition: opacity 0.3s ease;
-  pointer-events: auto;
-  padding: 20px;
-  text-align: center;
-}
-
-.obs-guide-icon {
-  font-size: 38px;
-  opacity: 0.7;
-  filter: drop-shadow(0 0 10px var(--neon-red));
-}
-
-.obs-guide-title {
-  font-family: var(--font-display);
-  font-size: 26px;
-  letter-spacing: 2px;
-  color: #fff;
-}
-
-.obs-guide-text {
-  font-family: var(--font-brand);
-  font-size: 13px;
-  color: var(--text-dim);
-  max-width: 550px;
-  line-height: 1.5;
-}
-
-.obs-guide-btn {
-  background: rgba(255, 26, 75, 0.2);
-  border: 1px solid var(--neon-red);
-  color: #fff;
-  font-family: var(--font-brand);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  padding: 8px 18px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 6px;
-}
-
-.obs-guide-btn:hover {
-  background: var(--neon-red);
-  box-shadow: 0 0 15px var(--neon-red-glow);
-}
-
-/* Local video preview (when tester clicks to preview local webcam) */
-.browser-cam-video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 1;
-  display: none;
-  transform: scaleX(-1); /* mirror */
 }
 
 /* Large Webcam Brand & Status Bar */
@@ -492,6 +464,7 @@
   flex-direction: column;
   gap: 12px;
   scroll-behavior: smooth;
+  position: relative;
 }
 
 .chat-messages-viewport::-webkit-scrollbar {
@@ -509,6 +482,31 @@
 
 .chat-messages-viewport::-webkit-scrollbar-thumb:hover {
   background: var(--neon-red);
+}
+
+/* Empty chat placeholder (waiting for real Twitch messages) */
+.chat-empty-notice {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+  opacity: 0.7;
+}
+
+.chat-empty-notice .empty-icon {
+  font-size: 28px;
+}
+
+.chat-empty-notice .empty-text {
+  font-family: var(--font-brand);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 /* Individual Chat Message Item */
@@ -638,7 +636,7 @@
   box-shadow: inset 0 0 15px rgba(255, 26, 75, 0.15);
 }
 
-/* Chat Footer Controls & Simulator */
+/* Chat Footer Controls */
 .chat-footer {
   padding: 10px 16px;
   background: rgba(20, 5, 16, 0.95);
