@@ -217,12 +217,23 @@
       this.renderAlert(data);
     }
 
+    // Strict HTML sanitizer to prevent XSS attacks in OBS Studio Browser Source
+    escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     renderAlert(data) {
-      const type = data.type || 'follower';
-      const user = data.user || 'Novo Viewer';
-      const detail = data.detail || '';
-      const amount = data.amount || '';
-      const message = data.message || '';
+      const type = (data.type || 'follower').toLowerCase();
+      const safeUser = this.escapeHtml(data.user || 'Novo Viewer');
+      const safeAmount = this.escapeHtml(data.amount || '');
+      const safeMessage = this.escapeHtml(data.message || '');
+      const rawDetail = data.detail || '';
 
       // Set config based on type
       let badgeText = '★ NOVO SEGUIDOR';
@@ -231,23 +242,25 @@
 
       if (type === 'sub' || type === 'resub') {
         badgeText = '💎 NOVO SUB';
-        defaultDetail = detail || 'acabou de se inscrever no canal!';
+        defaultDetail = rawDetail ? this.escapeHtml(rawDetail) : 'acabou de se inscrever no canal!';
         typeClass = 'type-sub';
       } else if (type === 'donation' || type === 'pix') {
         badgeText = '💵 NOVA DOAÇÃO // PIX';
-        defaultDetail = `doou <b>${amount || 'R$ 10,00'}</b>!`;
+        defaultDetail = `doou <b>${safeAmount || 'R$ 10,00'}</b>!`;
         typeClass = 'type-donation';
       } else if (type === 'bits' || type === 'cheer') {
         badgeText = '⚡ CHEER DE BITS';
-        defaultDetail = `enviou <b>${amount || '100'} Bits</b>!`;
+        defaultDetail = `enviou <b>${safeAmount || '100'} Bits</b>!`;
         typeClass = 'type-bits';
       } else if (type === 'raid' || type === 'host') {
         badgeText = '🚨 RAID ENTRANTE';
-        defaultDetail = `chegou com <b>${amount || '50'} espectadores</b>!`;
+        defaultDetail = `chegou com <b>${safeAmount || '50'} espectadores</b>!`;
         typeClass = 'type-raid';
       }
 
-      // Build alert HTML (cantos brancos removidos)
+      const detailHtml = rawDetail ? this.escapeHtml(rawDetail) : defaultDetail;
+
+      // Build safe alert HTML
       const alertBox = document.createElement('div');
       alertBox.className = `alert-box ${typeClass}`;
       alertBox.innerHTML = `
@@ -258,35 +271,47 @@
 
         <div class="alert-content">
           <div class="alert-type-badge">${badgeText}</div>
-          <div class="alert-user-name">${user}</div>
-          <div class="alert-detail-text">${detail || defaultDetail}</div>
-          ${message ? `<div class="alert-custom-message">"${message}"</div>` : ''}
+          <div class="alert-user-name">${safeUser}</div>
+          <div class="alert-detail-text">${detailHtml}</div>
+          ${safeMessage ? `<div class="alert-custom-message">"${safeMessage}"</div>` : ''}
         </div>
       `;
 
-      this.container.innerHTML = '';
+      // Clear any remaining elements in container to prevent memory leaks
+      while (this.container.firstChild) {
+        this.container.removeChild(this.container.firstChild);
+      }
       this.container.appendChild(alertBox);
 
       // Play custom synth audio
       this.audio.playSound(type);
 
-      // Trigger animation in
+      // Trigger animation in GPU layer
       requestAnimationFrame(() => {
         alertBox.classList.add('active');
       });
 
-      // Stay on screen for 6.5 seconds
-      setTimeout(() => {
+      // Clear pending dismiss timer if exists
+      if (this._dismissTimer) clearTimeout(this._dismissTimer);
+      if (this._removeTimer) clearTimeout(this._removeTimer);
+
+      // Clean node disposal when alert leaves
+      const cleanupAlertNode = () => {
+        alertBox.removeEventListener('transitionend', cleanupAlertNode);
+        if (alertBox.parentElement) {
+          alertBox.remove();
+        }
+        setTimeout(() => this.processNext(), 350);
+      };
+
+      // Stay on screen for 6.2 seconds
+      this._dismissTimer = setTimeout(() => {
         alertBox.classList.remove('active');
         alertBox.classList.add('leaving');
 
-        setTimeout(() => {
-          if (alertBox.parentElement) {
-            alertBox.remove();
-          }
-          // Process next alert in queue
-          setTimeout(() => this.processNext(), 500);
-        }, 450);
+        alertBox.addEventListener('transitionend', cleanupAlertNode, { once: true });
+        // Fallback safeguard timer if transitionend is skipped by OBS throttling
+        this._removeTimer = setTimeout(cleanupAlertNode, 600);
       }, 6200);
     }
   }
