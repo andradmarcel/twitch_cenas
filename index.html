@@ -631,6 +631,47 @@
       </div>
     </section>
 
+    <!-- Twitch EventSub WebSocket Config Bar (Followers, Subs, Bits em Tempo Real) -->
+    <section class="channel-config-bar cyber-panel" style="border-color: rgba(145, 70, 255, 0.5); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 20px rgba(145, 70, 255, 0.2); margin-top: -12px;">
+      <div style="display: flex; flex-direction: column; gap: 14px; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div class="channel-config-left">
+            <span class="pulse-dot" id="eventsub-led" style="background: #9146FF; box-shadow: 0 0 12px #9146FF;"></span>
+            <div class="channel-config-text">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span class="channel-config-label" style="color: #bf94ff; font-size: 13.5px;">TWITCH EVENTSUB WEBSOCKET (SEGUIDORES, SUBS & BITS REAIS)</span>
+                <span id="eventsub-status-tag" style="font-size: 11px; padding: 3px 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: #ccc; font-weight: 800; letter-spacing: 1px;">⚪ VERIFICANDO...</span>
+              </div>
+              <span class="channel-config-desc" id="eventsub-status-desc">Conecta diretamente à API WebSocket oficial da Twitch para tocar o alerta e atualizar o letreiro assim que alguém seguir a live!</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <a href="https://twitchtokengenerator.com/quick/6sPj9Y7yYd" target="_blank" class="action-btn" style="background: rgba(145, 70, 255, 0.2); border-color: #9146FF; color: #e2d2ff; text-decoration: none;">
+              <span>🔑</span> Gerar Token em 1 Clique
+            </a>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.35); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(145, 70, 255, 0.2);">
+          <div class="channel-input-wrapper" style="flex: 1; min-width: 240px;">
+            <span class="channel-prefix" style="color: #bf94ff;">Client ID:</span>
+            <input type="text" id="eventsub-input-client-id" placeholder="Ex: gp762nuuoqcoxypju8c569th9wz7q5" style="flex: 1; min-width: 180px;">
+          </div>
+          <div class="channel-input-wrapper" style="flex: 1.5; min-width: 280px; position: relative;">
+            <span class="channel-prefix" style="color: #bf94ff;">Token OAuth:</span>
+            <input type="password" id="eventsub-input-token" placeholder="User Access Token (com moderator:read:followers)" style="flex: 1; min-width: 200px; padding-right: 36px;">
+            <button type="button" onclick="toggleTokenVisibility()" style="position: absolute; right: 8px; background: none; border: none; color: #bf94ff; cursor: pointer; font-size: 14px;" title="Mostrar/Ocultar Token">👁</button>
+          </div>
+          <button onclick="saveAndConnectEventSub()" class="action-btn" style="background: #9146FF; color: #fff; font-weight: 800; border: none; box-shadow: 0 0 15px rgba(145, 70, 255, 0.4);">
+            <span>⚡</span> Conectar & Salvar
+          </button>
+          <button onclick="disconnectEventSubManual()" class="action-btn" style="background: rgba(255, 255, 255, 0.08); color: #bbb;">
+            <span>✕</span> Limpar
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- Live Preview Viewport -->
     <section class="preview-section">
       <div class="preview-header">
@@ -1005,6 +1046,22 @@
       if (savedDon) document.getElementById('hud-real-donate').value = savedDon;
       if (savedSb) document.getElementById('hud-real-sub').value = savedSb;
 
+      // Carregar credenciais EventSub salvas
+      const savedClientId = localStorage.getItem('dec4land_eventsub_client_id') || (window.DEC4LAND_CONFIG?.twitchClientId || '');
+      const savedToken = localStorage.getItem('dec4land_eventsub_token') || (window.DEC4LAND_CONFIG?.twitchOAuthToken || '');
+      const inputClientId = document.getElementById('eventsub-input-client-id');
+      const inputToken = document.getElementById('eventsub-input-token');
+      if (inputClientId && savedClientId) inputClientId.value = savedClientId;
+      if (inputToken && savedToken) inputToken.value = savedToken;
+
+      // Monitorar status do Twitch EventSub
+      if (window.dec4landEventSub) {
+        window.dec4landEventSub.onStatusChange(updateEventSubUI);
+      }
+      window.addEventListener('dec4land_eventsub_status', (e) => {
+        if (e.detail) updateEventSubUI(e.detail.status, e.detail.message);
+      });
+
       updateCardUrls();
     });
 
@@ -1073,7 +1130,94 @@
         alert('URL copiada para a área de transferência:\n' + targetUrl + '\n\nBasta colar como Navegador (Browser Source) no OBS Studio!');
       });
     }
+
+    // Gerenciador de Interface Twitch EventSub
+    function updateEventSubUI(status, message) {
+      const tag = document.getElementById('eventsub-status-tag');
+      const led = document.getElementById('eventsub-led');
+      const desc = document.getElementById('eventsub-status-desc');
+      if (!tag || !led) return;
+
+      if (status === 'connected') {
+        tag.textContent = '🟢 CONECTADO (FOLLOWS & SUBS ATIVOS)';
+        tag.style.background = 'rgba(0, 255, 127, 0.2)';
+        tag.style.color = '#00ff7f';
+        led.style.background = '#00ff7f';
+        led.style.boxShadow = '0 0 14px #00ff7f';
+        if (desc) desc.textContent = 'WebSocket ativo! Qualquer novo seguidor ou sub na Twitch tocará o alerta instantaneamente no OBS e atualizará os letreiros.';
+      } else if (status === 'connecting') {
+        tag.textContent = '🟡 CONECTANDO...';
+        tag.style.background = 'rgba(255, 184, 0, 0.2)';
+        tag.style.color = '#ffb800';
+        led.style.background = '#ffb800';
+        led.style.boxShadow = '0 0 14px #ffb800';
+        if (desc) desc.textContent = 'Estabelecendo conexão segura com o WebSocket oficial da Twitch (EventSub)...';
+      } else if (status === 'error') {
+        tag.textContent = '🔴 ERRO NA AUTENTICAÇÃO';
+        tag.style.background = 'rgba(255, 26, 75, 0.25)';
+        tag.style.color = '#ff1a4b';
+        led.style.background = '#ff1a4b';
+        led.style.boxShadow = '0 0 14px #ff1a4b';
+        if (desc) desc.textContent = message || 'Falha ao autenticar. Verifique se o Client ID e o Token OAuth estão corretos e atualizados.';
+      } else if (status === 'unconfigured') {
+        tag.textContent = '⚪ NÃO CONFIGURADO';
+        tag.style.background = 'rgba(255, 255, 255, 0.1)';
+        tag.style.color = '#aaa';
+        led.style.background = '#9146FF';
+        led.style.boxShadow = '0 0 10px #9146FF';
+        if (desc) desc.textContent = 'Gere um Token OAuth com o escopo "moderator:read:followers" clicando no botão acima para ativar os alertas de seguidor reais.';
+      } else {
+        tag.textContent = '⚪ DESCONECTADO';
+        tag.style.background = 'rgba(255, 255, 255, 0.1)';
+        tag.style.color = '#aaa';
+        led.style.background = '#555';
+        led.style.boxShadow = 'none';
+        if (desc) desc.textContent = message || 'Conexão inativa.';
+      }
+    }
+
+    function toggleTokenVisibility() {
+      const input = document.getElementById('eventsub-input-token');
+      if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+      }
+    }
+
+    function saveAndConnectEventSub() {
+      const clientId = (document.getElementById('eventsub-input-client-id').value || '').trim();
+      let token = (document.getElementById('eventsub-input-token').value || '').trim();
+      token = token.replace(/^oauth:/i, '').replace(/^Bearer /i, '').trim();
+
+      if (!clientId || !token) {
+        alert('Por favor preencha o Client ID e o Token OAuth para conectar ao EventSub.\n\nUse o botão "Gerar Token em 1 Clique" caso ainda não tenha.');
+        return;
+      }
+
+      if (window.dec4landEventSub) {
+        window.dec4landEventSub.saveCredentials(clientId, token);
+        alert('Credenciais salvas com sucesso!\nIniciando conexão com a Twitch...');
+      } else {
+        localStorage.setItem('dec4land_eventsub_client_id', clientId);
+        localStorage.setItem('dec4land_eventsub_token', token);
+        alert('Credenciais salvas no navegador! Recarregue a página para conectar.');
+      }
+    }
+
+    function disconnectEventSubManual() {
+      if (confirm('Deseja desconectar e remover as credenciais salvas do EventSub?')) {
+        localStorage.removeItem('dec4land_eventsub_client_id');
+        localStorage.removeItem('dec4land_eventsub_token');
+        document.getElementById('eventsub-input-client-id').value = '';
+        document.getElementById('eventsub-input-token').value = '';
+        if (window.dec4landEventSub) {
+          window.dec4landEventSub.disconnect();
+        }
+      }
+    }
   </script>
+  <script src="config.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/eventsub.js"></script>
   <script src="js/stinger.js"></script>
 </body>
 </html>

@@ -171,3 +171,19 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
 2. 📷 **Webcam** - *ajustada dentro da moldura da câmera*
 3. 🎮 **Captura de Jogo** - *no fundo*
 
+---
+
+## ⚡ Conexão Nativa Twitch EventSub (Follows, Subs & Bits em Tempo Real)
+
+As cenas do DEC4LAND contam com cliente nativo do **Twitch EventSub WebSocket (`wss://eventsub.wss.twitch.tv/ws`)**. Com ele, qualquer novo seguidor, sub ou raid na Twitch aciona instantaneamente o alerta com mascote, áudio de sintetizador e atualiza o letreiro do OBS sem precisar de StreamElements ou bots.
+
+### Como Ativar em 30 Segundos:
+
+1. Abra o painel [`index.html`](./index.html) no navegador.
+2. Na barra **TWITCH EVENTSUB WEBSOCKET**, clique no botão **🔑 Gerar Token em 1 Clique** (ou acesse [twitchtokengenerator.com](https://twitchtokengenerator.com/quick/6sPj9Y7yYd) com os escopos `moderator:read:followers channel:read:subscriptions bits:read`).
+3. Faça login com a sua conta da Twitch e autorize.
+4. Copie o **Client ID** e o **Access Token** gerados.
+5. Cole nos campos correspondentes no [`index.html`](./index.html) e clique em **⚡ Conectar & Salvar**.
+6. O LED ficará **🟢 CONECTADO** e os alertas de novos seguidores passarão a tocar automaticamente na sua live!
+
+

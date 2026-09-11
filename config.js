@@ -10,5 +10,10 @@ window.DEC4LAND_CONFIG = {
   // Redes sociais exibidas nas cenas
   socialTwitter: "@DEC4LANDOFICIAL",
   socialInstagram: "@ANDRADMARCEL",
-  socialYoutube: "/DEC4LAND"
+  socialYoutube: "/DEC4LAND",
+
+  // Twitch EventSub WebSocket (Alertas de Follow, Sub, Bits, Raid em tempo real)
+  // Você pode preencher aqui ou diretamente pelo painel do index.html!
+  twitchClientId: "",       // Ex: "gp762nuuoqcoxypju8c569th9wz7q5"
+  twitchOAuthToken: ""      // Token OAuth gerado com escopo moderator:read:followers (apenas o token, sem 'oauth:' ou 'Bearer ')
 };
