@@ -86,8 +86,9 @@
     animateValueChange(subEl, pillSub, text);
   };
 
-  // Update HUD event pills from alert events
-  window.triggerTwitchAlert = function(data) {
+  // Update HUD event pills from alert events & delegate to visual/audio alert manager
+  const _existingAlertTrigger = window.triggerTwitchAlert;
+  window.triggerTwitchAlert = function(data, broadcast = true) {
     if (!data) return;
 
     // Normalizing event types (follower/follow, donation/donate/pix, sub/resub, bits/cheer)
@@ -103,6 +104,13 @@
       window.updateSub(user, data.months || null);
     } else if (type === 'bits' || type === 'cheer') {
       window.updateDonate(user, `${data.amount || '100'} bits`);
+    }
+
+    // Call visual alert popup & audio synthesizer if available
+    if (typeof _existingAlertTrigger === 'function' && _existingAlertTrigger !== window.triggerTwitchAlert) {
+      _existingAlertTrigger(data, broadcast);
+    } else if (window.dec4landAlertManager && typeof window.dec4landAlertManager.enqueue === 'function') {
+      window.dec4landAlertManager.enqueue(data);
     }
   };
 

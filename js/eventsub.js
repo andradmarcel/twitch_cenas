@@ -29,7 +29,7 @@
         urlParams.get('client_id') ||
         localStorage.getItem('dec4land_eventsub_client_id') ||
         cfg.twitchClientId ||
-        ''
+        'gp762nuuoqcoxypju8c569th9wz7q5'
       ).trim();
 
       let token = (

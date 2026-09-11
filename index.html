@@ -6,6 +6,7 @@
   <title>DEC4LAND - Central de Cenas Twitch & Guia OBS</title>
   <link rel="stylesheet" href="css/shared.css">
   <link rel="stylesheet" href="css/stinger.css">
+  <link rel="stylesheet" href="css/alerts.css">
   <style>
     body {
       width: 100vw;
@@ -646,8 +647,8 @@
             </div>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
-            <a href="https://twitchtokengenerator.com/quick/6sPj9Y7yYd" target="_blank" class="action-btn" style="background: rgba(145, 70, 255, 0.2); border-color: #9146FF; color: #e2d2ff; text-decoration: none;">
-              <span>🔑</span> Gerar Token em 1 Clique
+            <a href="https://twitchtokengenerator.com/" target="_blank" class="action-btn" style="background: rgba(145, 70, 255, 0.25); border-color: #9146FF; color: #e2d2ff; text-decoration: none; font-weight: 700;">
+              <span>🔑</span> Abrir Twitch Token Generator
             </a>
           </div>
         </div>
@@ -655,11 +656,11 @@
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.35); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(145, 70, 255, 0.2);">
           <div class="channel-input-wrapper" style="flex: 1; min-width: 240px;">
             <span class="channel-prefix" style="color: #bf94ff;">Client ID:</span>
-            <input type="text" id="eventsub-input-client-id" placeholder="Ex: gp762nuuoqcoxypju8c569th9wz7q5" style="flex: 1; min-width: 180px;">
+            <input type="text" id="eventsub-input-client-id" value="gp762nuuoqcoxypju8c569th9wz7q5" placeholder="gp762nuuoqcoxypju8c569th9wz7q5" style="flex: 1; min-width: 180px;">
           </div>
           <div class="channel-input-wrapper" style="flex: 1.5; min-width: 280px; position: relative;">
             <span class="channel-prefix" style="color: #bf94ff;">Token OAuth:</span>
-            <input type="password" id="eventsub-input-token" placeholder="User Access Token (com moderator:read:followers)" style="flex: 1; min-width: 200px; padding-right: 36px;">
+            <input type="password" id="eventsub-input-token" placeholder="Cole aqui seu Access Token gerado" style="flex: 1; min-width: 200px; padding-right: 36px;">
             <button type="button" onclick="toggleTokenVisibility()" style="position: absolute; right: 8px; background: none; border: none; color: #bf94ff; cursor: pointer; font-size: 14px;" title="Mostrar/Ocultar Token">👁</button>
           </div>
           <button onclick="saveAndConnectEventSub()" class="action-btn" style="background: #9146FF; color: #fff; font-weight: 800; border: none; box-shadow: 0 0 15px rgba(145, 70, 255, 0.4);">
@@ -668,6 +669,16 @@
           <button onclick="disconnectEventSubManual()" class="action-btn" style="background: rgba(255, 255, 255, 0.08); color: #bbb;">
             <span>✕</span> Limpar
           </button>
+        </div>
+
+        <!-- Passo a Passo Didático -->
+        <div style="background: rgba(145, 70, 255, 0.08); border: 1px dashed rgba(145, 70, 255, 0.35); border-radius: 8px; padding: 12px 18px; font-size: 13px; line-height: 1.6; color: #d6c6f7;">
+          <b style="color: #fff;">📌 Como gerar seu Token em 3 passos no Twitch Token Generator:</b>
+          <ol style="margin: 6px 0 0 18px; padding: 0;">
+            <li>Clique em <b>Abrir Twitch Token Generator</b> acima (o Client ID padrão <code>gp762nuuoqcoxypju8c569th9wz7q5</code> já vem configurado).</li>
+            <li>No campo de busca <i>Filter scopes</i>, procure e marque: <code>moderator:read:followers</code> (seguidores) e opcionalmente <code>channel:read:subscriptions</code> (subs) e <code>bits:read</code> (bits).</li>
+            <li>Desça até o fim da página, clique no botão verde <b>Generate Token!</b>, autorize com sua Twitch e copie o <b>Access Token</b> para colar aqui!</li>
+          </ol>
         </div>
       </div>
     </section>
@@ -1184,18 +1195,19 @@
     }
 
     function saveAndConnectEventSub() {
-      const clientId = (document.getElementById('eventsub-input-client-id').value || '').trim();
+      const inputId = (document.getElementById('eventsub-input-client-id').value || '').trim();
+      const clientId = inputId || 'gp762nuuoqcoxypju8c569th9wz7q5';
       let token = (document.getElementById('eventsub-input-token').value || '').trim();
       token = token.replace(/^oauth:/i, '').replace(/^Bearer /i, '').trim();
 
-      if (!clientId || !token) {
-        alert('Por favor preencha o Client ID e o Token OAuth para conectar ao EventSub.\n\nUse o botão "Gerar Token em 1 Clique" caso ainda não tenha.');
+      if (!token) {
+        alert('Por favor cole o Token OAuth gerado para conectar ao EventSub.\n\nSiga o passo a passo logo abaixo para gerar o token em 3 cliques!');
         return;
       }
 
       if (window.dec4landEventSub) {
         window.dec4landEventSub.saveCredentials(clientId, token);
-        alert('Credenciais salvas com sucesso!\nIniciando conexão com a Twitch...');
+        alert('Credenciais salvas com sucesso!\nIniciando conexão segura com a Twitch...');
       } else {
         localStorage.setItem('dec4land_eventsub_client_id', clientId);
         localStorage.setItem('dec4land_eventsub_token', token);

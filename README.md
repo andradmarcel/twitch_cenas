@@ -180,10 +180,13 @@ As cenas do DEC4LAND contam com cliente nativo do **Twitch EventSub WebSocket (`
 ### Como Ativar em 30 Segundos:
 
 1. Abra o painel [`index.html`](./index.html) no navegador.
-2. Na barra **TWITCH EVENTSUB WEBSOCKET**, clique no botão **🔑 Gerar Token em 1 Clique** (ou acesse [twitchtokengenerator.com](https://twitchtokengenerator.com/quick/6sPj9Y7yYd) com os escopos `moderator:read:followers channel:read:subscriptions bits:read`).
-3. Faça login com a sua conta da Twitch e autorize.
-4. Copie o **Client ID** e o **Access Token** gerados.
-5. Cole nos campos correspondentes no [`index.html`](./index.html) e clique em **⚡ Conectar & Salvar**.
-6. O LED ficará **🟢 CONECTADO** e os alertas de novos seguidores passarão a tocar automaticamente na sua live!
+2. Na barra **TWITCH EVENTSUB WEBSOCKET**, clique no botão **🔑 Abrir Twitch Token Generator** (ou acesse [twitchtokengenerator.com](https://twitchtokengenerator.com/)).
+3. No campo **Filter scopes**, marque:
+   - `moderator:read:followers` (para alertas de novos seguidores)
+   - `channel:read:subscriptions` (para alertas de novos subs)
+   - `bits:read` (para alertas de bits)
+4. Role a página até o final e clique no botão verde **Generate Token!**, autorize com a sua conta da Twitch.
+5. Copie o **Access Token** e cole no painel [`index.html`](./index.html) (o Client ID padrão `gp762nuuoqcoxypju8c569th9wz7q5` já vem preenchido).
+6. Clique em **⚡ Conectar & Salvar**. O status ficará **🟢 CONECTADO** e todo follow real tocará o alerta instantaneamente na live!
 
 
