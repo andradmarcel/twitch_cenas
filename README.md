@@ -12,7 +12,7 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
 
 ---
 
-## 📦 As 3 Cenas Criadas
+## 📦 As Cenas Criadas da Suíte DEC4LAND
 
 ### 1. ⏳ Live Começando (`starting.html`)
 - **Resolução**: 1920x1080 Full HD
@@ -131,6 +131,31 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
 
 ---
 
+### 6. 🖥️ Cena de React & Apresentação (`react.html`)
+- **Resolução**: 1920x1080 Full HD
+- **Fundo**: Deep Wine com grade cibernética, partículas e corte duplo transparente via SVG Mask dinâmico.
+- **Recursos**:
+  - **Grande Espaço de Captura de Janela / Tela (Lado Esquerdo)**:
+    - Espaço transparente 16:9 de 1240x700px projetado especificamente para capturar seu navegador, Discord, vídeos de react, tutoriais ou apresentações sem ser gameplay.
+    - Moldura neon sólida estática com pulso suave de respiração (sem giros incômodos).
+    - Header com identificador `// CAPTURA DE JANELA / TELA` e badge DEC4LAND.
+  - **Coluna Direta Multifuncional (Lado Direito)**:
+    - **Webcam no Topo Direito (540x304px)**: Moldura estilizada com cantoneiras cibernéticas, badge LIVE e recorte 100% transparente para encaixar sua câmera.
+    - **Chat da Twitch em Tempo Real Embaixo**: Conexão nativa IRC com badges, cores de usuários, emotes oficiais e animação suave.
+  - **Rodapé e Meta**:
+    - Letreiros dinâmicos (Último Follow, Último Donate e Último Sub).
+    - Barra de progresso de meta e sistema de alertas embutido (EventSub).
+- **Parâmetros personalizáveis via URL**:
+  - `react.html?channel=dec4land` (define o canal da Twitch)
+  - `react.html?name=DEC4LAND` (nome do streamer)
+  - `react.html?mock=true` (simulação de chat e eventos)
+- **Atalhos de Teclado**:
+  - `C`: Simular nova mensagem no chat
+  - `V`: Ligar / Desligar webcam de teste no navegador
+  - `T`: Disparar alerta demonstrativo
+
+---
+
 ### 5. 🏁 Encerramento de Live (`ending.html`)
 - **Resolução**: 1920x1080 Full HD
 - **Recursos**:
@@ -149,18 +174,23 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
 ### Configuração Recomendada (Browser Source / Navegador):
 
 1. Abra o **OBS Studio**.
-2. No quadro **Cenas**, crie ou selecione uma cena (ex: `Conversa`).
+2. No quadro **Cenas**, crie ou selecione uma cena (ex: `React / Conversa`).
 3. No quadro **Fontes**, clique no botão **`+`** e selecione **Navegador (Browser)**.
-4. Nomeie a fonte (ex: `Overlay Conversa`) e clique em **OK**.
+4. Nomeie a fonte (ex: `Overlay React`) e clique em **OK**.
 5. Na janela de propriedades:
    - Marque a caixa **Arquivo local** e clique em **Localizar**.
-   - Selecione o arquivo `conversa.html` (ou `gameplay.html` / `starting.html`) da pasta `twitch_cenas`.
+   - Selecione o arquivo `react.html` (ou `conversa.html` / `gameplay.html` / `starting.html`) da pasta `twitch_cenas`.
    - Defina **Largura: `1920`**
    - Defina **Altura: `1080`**
    - Marque: **"Desativar fonte quando não visível"** e **"Atualizar o navegador quando a cena se tornar ativa"**.
 6. Clique em **OK**.
 
 ### Ordem de Camadas Recomendada no OBS:
+
+#### Para a Cena de React / Apresentação (`react.html`):
+1. 🔝 **Overlay React** (Navegador 1920x1080) - *no topo*
+2. 📷 **Webcam** (Dispositivo de Captura de Vídeo) - *ajustada dentro do quadro superior direito*
+3. 🖥️ **Captura de Janela / Tela** (Chrome, Discord, Vídeo) - *ajustada dentro do grande quadro à esquerda*
 
 #### Para a Cena de Conversa (`conversa.html`):
 1. 🔝 **Overlay Conversa** (Navegador 1920x1080) - *no topo*

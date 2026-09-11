@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+  <title>DEC4LAND - React & Apresentação (Captura de Janela + Webcam + Chat)</title>
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/react.css">
+  <link rel="stylesheet" href="css/alerts.css">
+  <script src="config.js"></script>
+</head>
+<body class="react-body">
+
+  <!-- SVG Mask: 2 Recortes 100% Transparentes no OBS (Janela/Tela à Esquerda + Câmera à Direita) -->
+  <svg width="0" height="0" style="position: absolute; pointer-events: none;">
+    <defs>
+      <mask id="react-cutout-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080">
+        <!-- Retângulo branco: Fundo cibernético visível em toda a tela -->
+        <rect x="0" y="0" width="1920" height="1080" fill="#ffffff" />
+        <!-- Retângulo preto 1: Janela / Tela 100% transparente através do overlay -->
+        <rect id="window-mask-hole" x="40" y="125" width="1334" height="750" rx="14" fill="#000000" />
+        <!-- Retângulo preto 2: Câmera do Streamer 100% transparente através do overlay -->
+        <rect id="webcam-mask-hole" x="1400" y="125" width="480" height="260" rx="12" fill="#000000" />
+      </mask>
+    </defs>
+  </svg>
+
+  <div class="scene-container react-scene-container" id="react-scene">
+    <!-- Twitch Alert Popup Layer -->
+    <div class="alert-container"></div>
+
+    <!-- Camada de Fundo Cibernético (Mascarada com os 2 furos transparentes) -->
+    <div class="react-ambient-layer">
+      <div class="react-ambient-gradient"></div>
+      <div class="cyber-grid"></div>
+      <canvas class="particles-canvas" id="particles-bg"></canvas>
+    </div>
+
+    <!-- Tech Corner Brackets -->
+    <div class="tech-bracket-tl"></div>
+    <div class="tech-bracket-tr">
+      <div class="tech-block-tr"></div>
+    </div>
+    <div class="tech-bracket-bl"></div>
+    <div class="tech-bracket-br"></div>
+
+    <!-- Main Scene Layout -->
+    <div class="react-layout">
+      
+      <!-- Top HUD Bar -->
+      <header class="react-top-hud">
+        <div class="hud-brand-group">
+          <h1 class="hud-brand-logo">DEC4LAND</h1>
+          <div class="hud-badge-divider"></div>
+          <div class="hud-scene-tag">
+            <span class="scene-tag-main">
+              <span>🖥️</span> REACT & APRESENTAÇÃO
+            </span>
+            <span class="scene-tag-sub">// SCREEN SHARE, WEBCAM & LIVE CHAT</span>
+          </div>
+        </div>
+
+        <div class="hud-center-status">
+          <div class="react-live-pill">
+            <span class="pulse-dot-live"></span>
+            <span>TRANSMISSÃO AO VIVO // 1080P60</span>
+          </div>
+        </div>
+
+        <div class="hud-socials-group">
+          <div class="hud-social-item">
+            <span class="social-icon">𝕏</span>
+            <span id="social-twitter">@DEC4LANDOFICIAL</span>
+          </div>
+          <div class="hud-social-item">
+            <span class="social-icon">📸</span>
+            <span id="social-instagram">@ANDRADMARCEL</span>
+          </div>
+          <div class="hud-social-item">
+            <span class="social-icon">▶</span>
+            <span id="social-youtube">/DEC4LAND</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Stage: Tela / Captura de Janela (Esquerda) + Câmera e Chat (Direita) -->
+      <main class="react-main-stage">
+        
+        <!-- Large Window / Screen Capture Frame (100% Transparente para Janela/Tela no OBS) -->
+        <section class="screen-column">
+          <div class="screen-wrapper">
+            
+            <!-- Pulsing Solid Neon SVG Border (Estática e sem giro) -->
+            <svg class="screen-svg-border" width="100%" height="100%" viewBox="0 0 1334 750" preserveAspectRatio="none">
+              <rect class="screen-svg-border-track" x="2" y="2" width="1330" height="746" rx="14"></rect>
+              <rect class="screen-svg-border-laser" x="2" y="2" width="1330" height="746" rx="14"></rect>
+            </svg>
+
+            <!-- 16:9 Inner Transparent Cutout Frame (A Janela / Tela do OBS aparece aqui) -->
+            <div class="screen-cutout-frame" id="screen-cutout-frame">
+              <div class="screen-header-bar">
+                <span class="screen-dot"></span>
+                <span>// CAPTURA DE JANELA / TELA</span>
+              </div>
+            </div>
+
+            <!-- Bottom Screen Brand Bar -->
+            <footer class="screen-brand-bar">
+              <div class="screen-brand-left">
+                <span class="screen-brand-logo">DEC4LAND</span>
+                <span class="screen-brand-desc">// CONTEÚDO AO VIVO & REACT</span>
+              </div>
+              <div class="screen-brand-right">
+                <span>16:9 FULL HD DISPLAY</span>
+              </div>
+            </footer>
+
+          </div>
+        </section>
+
+        <!-- Right Column: Streamer Camera (Top) + Real-time Live Chat (Bottom) -->
+        <aside class="sidebar-column">
+          
+          <!-- Streamer Webcam Module (100% Transparente para Webcam no OBS) -->
+          <div class="webcam-card">
+            
+            <!-- Pulsing Solid Neon SVG Border -->
+            <svg class="webcam-svg-border" width="100%" height="100%" viewBox="0 0 480 310" preserveAspectRatio="none">
+              <rect class="webcam-svg-border-track" x="2" y="2" width="476" height="306" rx="12"></rect>
+              <rect class="webcam-svg-border-laser" x="2" y="2" width="476" height="306" rx="12"></rect>
+            </svg>
+
+            <!-- 16:9 Cutout Frame for Webcam -->
+            <div class="webcam-cutout-frame" id="webcam-cutout-frame">
+              <div class="webcam-live-badge">
+                <span class="pulse-dot-live"></span>
+                <span>WEBCAM</span>
+              </div>
+            </div>
+
+            <!-- Bottom Webcam Brand Bar -->
+            <div class="webcam-brand-bar">
+              <div class="webcam-brand-left">
+                <div class="mascot-avatar-mini">
+                  <img src="assets/mascot.png" alt="Mascote DEC4LAND">
+                </div>
+                <div>
+                  <div class="webcam-name-text" id="streamer-display-name">DEC4LAND</div>
+                  <div class="webcam-tagline">// STREAM NETWORK</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Real-time Live Chat Container (Twitch WebSocket) -->
+          <div class="chat-card">
+            
+            <!-- Chat Header -->
+            <div class="chat-header">
+              <div class="chat-title-group">
+                <span class="chat-icon-bubble">💬</span>
+                <div>
+                  <h2 class="chat-heading">CHAT DA LIVE</h2>
+                  <span class="chat-channel-badge" id="chat-channel-badge">#DEC4LAND</span>
+                </div>
+              </div>
+              <div class="chat-status-pill">
+                <span class="chat-status-dot"></span>
+                <span id="chat-status-text">CONECTANDO...</span>
+              </div>
+            </div>
+
+            <!-- Chat Messages Viewport -->
+            <div class="chat-messages-viewport" id="chat-messages-viewport">
+              <div class="chat-empty-notice" id="chat-empty-notice">
+                <span class="empty-icon">💬</span>
+                <span class="empty-text">Aguardando mensagens do chat da Twitch...</span>
+              </div>
+            </div>
+
+            <!-- Chat Footer -->
+            <div class="chat-footer">
+              <span class="chat-footer-tip">Conectado via WebSocket</span>
+              <button class="chat-test-btn" onclick="simulateChatMessage()">
+                + Simular Mensagem
+              </button>
+            </div>
+
+          </div>
+
+        </aside>
+
+      </main>
+
+      <!-- Bottom Event Bar & Sub/Follow Goal -->
+      <footer class="react-bottom-bar">
+        
+        <!-- Live Event Indicators -->
+        <div class="event-pills-row">
+          <!-- Último Follow -->
+          <div class="react-pill" id="pill-follower">
+            <div class="react-pill-icon pill-icon-follow">★</div>
+            <div class="react-pill-text">
+              <span class="react-pill-label">ÚLTIMO FOLLOW</span>
+              <span class="react-pill-val" id="pill-val-follower">-</span>
+            </div>
+          </div>
+
+          <!-- Último Donate / Pix -->
+          <div class="react-pill" id="pill-donate">
+            <div class="react-pill-icon pill-icon-donate">💰</div>
+            <div class="react-pill-text">
+              <span class="react-pill-label">ÚLTIMO DONATE / PIX</span>
+              <span class="react-pill-val" id="pill-val-donate">-</span>
+            </div>
+          </div>
+
+          <!-- Último Sub -->
+          <div class="react-pill" id="pill-sub">
+            <div class="react-pill-icon pill-icon-sub">💎</div>
+            <div class="react-pill-text">
+              <span class="react-pill-label">ÚLTIMO SUB</span>
+              <span class="react-pill-val" id="pill-val-sub">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Follower/Sub Goal Widget -->
+        <div class="sub-goal-box">
+          <div class="goal-header">
+            <span class="goal-title" id="goal-title-text">META DE SEGUIDORES</span>
+            <span class="goal-count" id="goal-count-text">340 / 500</span>
+          </div>
+          <div class="goal-track">
+            <div class="goal-progress" id="goal-progress-bar"></div>
+          </div>
+        </div>
+
+      </footer>
+
+    </div>
+  </div>
+
+  <!-- Scene Scripts -->
+  <script src="js/particles.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/eventsub.js"></script>
+  <script src="js/react.js"></script>
+  <script>
+    // Initialize cyber background particles
+    document.addEventListener('DOMContentLoaded', () => {
+      new CyberParticles('particles-bg');
+    });
+  </script>
+</body>
+</html>

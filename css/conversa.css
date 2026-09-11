@@ -206,12 +206,22 @@ body.conversa-body {
   flex: 1;
   border-radius: 14px;
   background: transparent !important;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 0 0 35px rgba(255, 26, 75, 0.35);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 26, 75, 0.35);
   display: flex;
   flex-direction: column;
+  animation: bigWebcamGlowPulse 3.5s ease-in-out infinite;
 }
 
-/* SVG Laser Running Border */
+@keyframes bigWebcamGlowPulse {
+  0%, 100% {
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 26, 75, 0.3);
+  }
+  50% {
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 0 0 35px rgba(255, 26, 75, 0.55), 0 0 50px rgba(255, 26, 75, 0.2);
+  }
+}
+
+/* Moldura Total Neon Fixa (Sem rotação, com pulso lento) */
 .big-webcam-svg-border {
   position: absolute;
   top: 0;
@@ -225,26 +235,31 @@ body.conversa-body {
 
 .big-svg-border-track {
   fill: none;
-  stroke: rgba(255, 26, 75, 0.35);
-  stroke-width: 2.5;
+  stroke: rgba(255, 26, 75, 0.45);
+  stroke-width: 3;
   rx: 14;
 }
 
 .big-svg-border-laser {
   fill: none;
   stroke: var(--neon-red-bright);
-  stroke-width: 3.5;
-  stroke-linecap: round;
-  stroke-dasharray: 240 1000;
-  stroke-dashoffset: 0;
-  animation: laserSweepBig 6s linear infinite;
-  filter: drop-shadow(0 0 10px var(--neon-red)) drop-shadow(0 0 4px #ffffff);
+  stroke-width: 2.5;
   rx: 14;
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 6px var(--neon-red)) drop-shadow(0 0 14px var(--neon-red-glow));
+  animation: bigNeonBorderPulse 3.5s ease-in-out infinite;
 }
 
-@keyframes laserSweepBig {
-  from { stroke-dashoffset: 2480; }
-  to { stroke-dashoffset: 0; }
+@keyframes bigNeonBorderPulse {
+  0%, 100% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 5px var(--neon-red)) drop-shadow(0 0 10px rgba(255, 26, 75, 0.5));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 9px var(--neon-red-bright)) drop-shadow(0 0 20px var(--neon-red-glow)) drop-shadow(0 0 2px #ffffff);
+  }
 }
 
 /* 16:9 Inner Transparent Cutout Frame (100% CLEAN FOR OBS CAMERA SOURCE) */

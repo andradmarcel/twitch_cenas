@@ -581,6 +581,9 @@
         <button class="tab-btn" onclick="switchScene('conversa')">
           <span>05.</span> CONVERSA / CHAT
         </button>
+        <button class="tab-btn" onclick="switchScene('react')">
+          <span>06.</span> REACT / APRESENTAÇÃO
+        </button>
       </div>
     </header>
 
@@ -818,6 +821,17 @@
         <div class="card-obs-url" id="url-conversa">conversa.html</div>
       </div>
 
+      <!-- React / Apresentação Card -->
+      <div class="scene-card">
+        <div class="card-top">
+          <span class="card-tag" style="color: #00ff7f; background: rgba(0, 255, 127, 0.15);">CENA 06</span>
+          <a href="react.html" target="_blank" class="action-btn">Abrir</a>
+        </div>
+        <h3 class="card-title">REACT & APRESENTAÇÃO</h3>
+        <p class="card-desc">Recorte para Captura de Janela/Tela (vídeos, sites, react, Discord), com Webcam no topo direito e Chat da Twitch em tempo real.</p>
+        <div class="card-obs-url" id="url-react">react.html</div>
+      </div>
+
       <!-- Standalone Alerts Card -->
       <div class="scene-card">
         <div class="card-top">
@@ -968,6 +982,14 @@
         if (sS) conversaUrl += '&sub=' + encodeURIComponent(sS);
         conversaEl.textContent = conversaUrl;
       }
+      const reactEl = document.getElementById('url-react');
+      if (reactEl) {
+        let reactUrl = base + 'react.html?channel=' + encodeURIComponent(currentChannel);
+        if (sF) reactUrl += '&follow=' + encodeURIComponent(sF);
+        if (sD) reactUrl += '&donate=' + encodeURIComponent(sD);
+        if (sS) reactUrl += '&sub=' + encodeURIComponent(sS);
+        reactEl.textContent = reactUrl;
+      }
       const alertsEl = document.getElementById('url-alerts');
       if (alertsEl) alertsEl.textContent = base + 'alerts.html';
       const stingerEl = document.getElementById('url-stinger');
@@ -1018,8 +1040,8 @@
       localStorage.setItem('dec4land_twitch_channel', currentChannel);
       updateCardUrls();
 
-      // If currently previewing gameplay or conversa, reload with new channel
-      if (currentScene === 'gameplay' || currentScene === 'conversa') {
+      // If currently previewing gameplay, conversa or react, reload with new channel
+      if (currentScene === 'gameplay' || currentScene === 'conversa' || currentScene === 'react') {
         iframe.src = currentScene + '.html?channel=' + encodeURIComponent(currentChannel);
         btnFullscreen.href = currentScene + '.html?channel=' + encodeURIComponent(currentChannel);
       }
@@ -1128,13 +1150,20 @@
         mockGame.style.display = 'none';
         titleEl.textContent = 'CENA: CONVERSA / JUST CHATTING (Twitch #' + currentChannel.toUpperCase() + ')';
         btnFullscreen.href = 'conversa.html?channel=' + encodeURIComponent(currentChannel);
+      } else if (sceneName === 'react') {
+        const btn = document.querySelector('.tab-btn:nth-child(6)');
+        if (btn) btn.classList.add('active');
+        iframe.src = 'react.html?channel=' + encodeURIComponent(currentChannel);
+        mockGame.style.display = 'none';
+        titleEl.textContent = 'CENA: REACT & APRESENTAÇÃO (Twitch #' + currentChannel.toUpperCase() + ')';
+        btnFullscreen.href = 'react.html?channel=' + encodeURIComponent(currentChannel);
       }
     }
 
     function copyCurrentSceneUrl() {
       const base = getBaseUrl();
       let targetUrl = base + currentScene + '.html';
-      if (currentScene === 'gameplay' || currentScene === 'conversa') {
+      if (currentScene === 'gameplay' || currentScene === 'conversa' || currentScene === 'react') {
         targetUrl += '?channel=' + encodeURIComponent(currentChannel);
       }
       navigator.clipboard.writeText(targetUrl).then(() => {
