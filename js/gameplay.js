@@ -106,12 +106,8 @@
       window.updateDonate(user, `${data.amount || '100'} bits`);
     }
 
-    // Call visual alert popup & audio synthesizer if available
-    if (typeof _existingAlertTrigger === 'function' && _existingAlertTrigger !== window.triggerTwitchAlert) {
-      _existingAlertTrigger(data, broadcast);
-    } else if (window.dec4landAlertManager && typeof window.dec4landAlertManager.enqueue === 'function') {
-      window.dec4landAlertManager.enqueue(data);
-    }
+    // Modo HUD passivo: apenas atualiza os letreiros da moldura.
+    // Alertas visuais e sonoros são executados estritamente na fonte dedicada alerts.html
   };
 
   // Broadcast channel for sync between index.html, alerts.html, and gameplay.html
@@ -209,101 +205,53 @@
   const cfg = window.DEC4LAND_CONFIG || {};
   const twitchChannel = (urlParams.get('channel') || cfg.twitchChannel || localStorage.getItem('dec4land_twitch_channel') || 'dec4land').toLowerCase().replace(/^@|^#/, '');
 
-  function parseIrcTags(rawTags) {
-    const tags = {};
-    if (!rawTags) return tags;
-    rawTags.split(';').forEach(tag => {
-      const eq = tag.indexOf('=');
-      if (eq !== -1) {
-        tags[tag.substring(0, eq)] = tag.substring(eq + 1);
+  // Conexão Twitch IRC via Shared TwitchIrcClient para captura de Subs, Raids e Bits
+  let twitchIrc = null;
+  function connectTwitch() {
+    if (!window.TwitchIrcClient) {
+      console.warn('[Gameplay] TwitchIrcClient não encontrado.');
+      return;
+    }
+
+    twitchIrc = new window.TwitchIrcClient({
+      channel: twitchChannel,
+      onNotice: (notice) => {
+        if (notice.msgId === 'sub' || notice.msgId === 'resub') {
+          window.updateSub(notice.user, notice.months);
+          broadcastAlert({
+            type: 'sub',
+            user: notice.user,
+            months: notice.months,
+            detail: `assinou o canal (${notice.months} meses)!`
+          });
+        } else if (notice.msgId === 'subgift' || notice.msgId === 'anonsubgift') {
+          broadcastAlert({
+            type: 'sub',
+            user: notice.user,
+            detail: `presenteou um Sub para ${notice.recipient}!`
+          });
+        } else if (notice.msgId === 'raid') {
+          broadcastAlert({
+            type: 'raid',
+            user: notice.user,
+            amount: notice.viewers,
+            detail: `chegou com ${notice.viewers} espectadores!`
+          });
+        }
+      },
+      onMessage: (msg) => {
+        if (msg.bits) {
+          window.updateDonate(msg.displayName || msg.username, `${msg.bits} bits`);
+          broadcastAlert({
+            type: 'bits',
+            user: msg.displayName || msg.username,
+            amount: msg.bits
+          });
+        }
       }
     });
-    return tags;
-  }
 
-  function connectTwitch() {
-    try {
-      const socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-      socket.onopen = function() {
-        socket.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-        socket.send('PASS SCHMOOPIIE');
-        socket.send('NICK justinfan' + Math.floor(Math.random() * 80000 + 10000));
-        socket.send('JOIN #' + twitchChannel);
-      };
-
-      socket.onmessage = function(e) {
-        const lines = e.data.split('\r\n');
-        lines.forEach(line => {
-          if (line.startsWith('PING')) {
-            socket.send('PONG :tmi.twitch.tv');
-            return;
-          }
-
-          // Handle Twitch USERNOTICE (Real Sub, Resub, Subgift, Raid)
-          if (line.includes(' USERNOTICE ')) {
-            let tags = {};
-            if (line.startsWith('@')) {
-              const sp = line.indexOf(' ');
-              tags = parseIrcTags(line.substring(1, sp));
-            }
-
-            const msgId = tags['msg-id'] || '';
-            const user = tags['display-name'] || tags['login'] || 'Viewer';
-            const months = tags['msg-param-cumulative-months'] || '1';
-
-            if (msgId === 'sub' || msgId === 'resub') {
-              window.updateSub(user, months);
-              broadcastAlert({ 
-                type: 'sub', 
-                user: user, 
-                months: months,
-                detail: `assinou o canal (${months} meses)!` 
-              });
-            } else if (msgId === 'subgift' || msgId === 'anonsubgift') {
-              const recipient = tags['msg-param-recipient-display-name'] || 'um espectador';
-              broadcastAlert({
-                type: 'sub',
-                user: user,
-                detail: `presenteou um Sub para ${recipient}!`
-              });
-            } else if (msgId === 'raid') {
-              const viewers = tags['msg-param-viewerCount'] || '10';
-              broadcastAlert({
-                type: 'raid',
-                user: user,
-                amount: viewers,
-                detail: `chegou com ${viewers} espectadores!`
-              });
-            }
-          }
-
-          // Handle Twitch bits / cheer via PRIVMSG
-          if (line.includes(' PRIVMSG ') && line.includes('bits=')) {
-            let tags = {};
-            if (line.startsWith('@')) {
-              const sp = line.indexOf(' ');
-              tags = parseIrcTags(line.substring(1, sp));
-            }
-            if (tags['bits']) {
-              const user = tags['display-name'] || tags['login'] || 'Viewer';
-              const bits = tags['bits'];
-              window.updateDonate(user, `${bits} bits`);
-              broadcastAlert({
-                type: 'bits',
-                user: user,
-                amount: bits
-              });
-            }
-          }
-        });
-      };
-
-      socket.onclose = function() {
-        setTimeout(connectTwitch, 8000);
-      };
-    } catch (err) {
-      console.warn('[Twitch] WebSocket error:', err);
-    }
+    twitchIrc.connect();
   }
 
   connectTwitch();

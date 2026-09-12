@@ -126,10 +126,6 @@
           else if (type === 'donate' || type === 'pix') window.updateDonate(p.user, p.amount || 'R$ 10,00');
           else if (type === 'sub' || type === 'resub') window.updateSub(p.user, p.months);
           else if (type === 'bits' || type === 'cheer') window.updateDonate(p.user, `${p.amount || 100} bits`);
-
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert(p);
-          }
         } else if (e.data.action === 'update_hud_info') {
           if (e.data.follower) window.updateFollower(e.data.follower);
           if (e.data.donate) window.updateDonate(e.data.donate);
@@ -267,125 +263,52 @@
     chatViewport.scrollTop = chatViewport.scrollHeight;
   };
 
-  // Connect to Twitch Chat IRC
-  let twitchSocket = null;
+  // Connect to Twitch Chat IRC via Shared TwitchIrcClient
+  let twitchIrc = null;
   function connectTwitchChat() {
-    try {
-      if (chatStatusText) chatStatusText.textContent = 'CONECTANDO...';
-      twitchSocket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-
-      twitchSocket.onopen = function() {
-        twitchSocket.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-        twitchSocket.send('PASS SCHMOOPIIE');
-        twitchSocket.send('NICK justinfan' + Math.floor(Math.random() * 80000 + 10000));
-        twitchSocket.send('JOIN #' + twitchChannel);
-
-        if (chatStatusText) {
-          chatStatusText.textContent = `AO VIVO (#${twitchChannel})`;
-        }
-      };
-
-      twitchSocket.onmessage = function(e) {
-        const lines = e.data.split('\r\n');
-        lines.forEach(line => {
-          if (!line) return;
-
-          if (line.startsWith('PING')) {
-            twitchSocket.send('PONG :tmi.twitch.tv');
-            return;
-          }
-
-          // Handle PRIVMSG (Live Twitch chat message)
-          if (line.includes(' PRIVMSG ')) {
-            let tags = {};
-            let rest = line;
-            if (line.startsWith('@')) {
-              const sp = line.indexOf(' ');
-              tags = parseIrcTags(line.substring(1, sp));
-              rest = line.substring(sp + 1);
-            }
-
-            const colonIdx = rest.indexOf(' :');
-            const messageText = colonIdx !== -1 ? rest.substring(colonIdx + 2) : '';
-
-            // Extract username: from display-name or login in IRC prefix
-            let user = tags['display-name'];
-            if (!user) {
-              const match = rest.match(/^:([^!@\s]+)/);
-              user = match ? match[1] : 'Viewer';
-            }
-
-            const color = tags['color'] || '';
-            const rawBadges = (tags['badges'] || '').split(',').filter(Boolean);
-            const emotesTag = tags['emotes'] || '';
-
-            let highlight = '';
-            if (rawBadges.some(b => b.startsWith('broadcaster'))) highlight = 'broadcaster';
-            else if (tags['bits']) highlight = 'bits';
-            else if (rawBadges.some(b => b.startsWith('subscriber'))) highlight = 'sub';
-
-            window.addChatMessage({
-              user,
-              color,
-              badges: rawBadges,
-              message: messageText,
-              emotes: emotesTag,
-              highlight
-            });
-          }
-
-          // Handle USERNOTICE (Subscriptions / Raids)
-          if (line.includes(' USERNOTICE ')) {
-            let tags = {};
-            let rest = line;
-            if (line.startsWith('@')) {
-              const sp = line.indexOf(' ');
-              tags = parseIrcTags(line.substring(1, sp));
-              rest = line.substring(sp + 1);
-            }
-            const msgId = tags['msg-id'] || '';
-            let user = tags['display-name'];
-            if (!user) {
-              const match = rest.match(/^:([^!@\s]+)/);
-              user = match ? match[1] : 'Viewer';
-            }
-            const months = tags['msg-param-cumulative-months'] || '1';
-
-            if (msgId === 'sub' || msgId === 'resub') {
-              window.updateSub(user, months);
-              window.addChatMessage({
-                user: 'DEC4LAND SYSTEM',
-                color: '#ffb800',
-                badges: ['subscriber'],
-                message: `🎉 ${user} assinou o canal (${months} meses)!`,
-                highlight: 'sub'
-              });
-            } else if (msgId === 'raid') {
-              const viewers = tags['msg-param-viewerCount'] || '10';
-              window.addChatMessage({
-                user: 'DEC4LAND SYSTEM',
-                color: '#00d2ff',
-                badges: ['broadcaster'],
-                message: `🚀 RAID! ${user} chegou com ${viewers} espectadores!`,
-                highlight: 'broadcaster'
-              });
-            }
-          }
-        });
-      };
-
-      twitchSocket.onerror = function() {
-        if (chatStatusText) chatStatusText.textContent = 'RECONECTANDO...';
-      };
-
-      twitchSocket.onclose = function() {
-        if (chatStatusText) chatStatusText.textContent = 'RECONECTANDO...';
-        setTimeout(connectTwitchChat, 5000);
-      };
-
-    } catch (err) {
-      console.warn('[Twitch Chat] Socket error:', err);
+    if (!window.TwitchIrcClient) {
+      console.warn('[Twitch Chat] TwitchIrcClient não encontrado.');
+      return;
     }
+
+    twitchIrc = new window.TwitchIrcClient({
+      channel: twitchChannel,
+      onStatusChange: (status, text) => {
+        if (chatStatusText) chatStatusText.textContent = text;
+      },
+      onMessage: (msg) => {
+        window.addChatMessage({
+          user: msg.displayName || msg.username,
+          color: msg.color,
+          badges: msg.badges,
+          message: msg.message,
+          emotes: msg.emotes,
+          highlight: msg.highlight
+        });
+      },
+      onNotice: (notice) => {
+        if (notice.msgId === 'sub' || notice.msgId === 'resub') {
+          window.updateSub(notice.user, notice.months);
+          window.addChatMessage({
+            user: 'DEC4LAND SYSTEM',
+            color: '#ffb800',
+            badges: ['subscriber'],
+            message: `🎉 ${notice.user} assinou o canal (${notice.months} meses)!`,
+            highlight: 'sub'
+          });
+        } else if (notice.msgId === 'raid') {
+          window.addChatMessage({
+            user: 'DEC4LAND SYSTEM',
+            color: '#00d2ff',
+            badges: ['broadcaster'],
+            message: `🚀 RAID! ${notice.user} chegou com ${notice.viewers} espectadores!`,
+            highlight: 'broadcaster'
+          });
+        }
+      }
+    });
+
+    twitchIrc.connect();
   }
 
   connectTwitchChat();

@@ -1,6 +1,8 @@
 // DEC4LAND Stream Suite - Configurações Gerais
-// Altere aqui o seu canal da Twitch e redes sociais para aplicar automaticamente em todas as cenas do OBS!
-window.DEC4LAND_CONFIG = {
+// IMPORTANTE: Não insira seus tokens privados neste arquivo se for enviar para o GitHub.
+// Para credenciais privadas, use o painel (index.html) ou crie um arquivo 'config.local.js' (ignorado pelo git).
+
+const baseConfig = {
   // Nome exato do seu canal da Twitch (letras minúsculas)
   twitchChannel: "dec4land",
 
@@ -13,7 +15,27 @@ window.DEC4LAND_CONFIG = {
   socialYoutube: "/DEC4LAND",
 
   // Twitch EventSub WebSocket (Alertas de Follow, Sub, Bits, Raid em tempo real)
-  // Você pode preencher aqui ou diretamente pelo painel do index.html!
   twitchClientId: "",       // Ex: "gp762nuuoqcoxypju8c569th9wz7q5"
-  twitchOAuthToken: ""      // Token OAuth gerado com escopo moderator:read:followers (apenas o token, sem 'oauth:' ou 'Bearer ')
+  twitchOAuthToken: ""      // Deixe vazio no repositório. Preencha em config.local.js ou no index.html
 };
+
+window.DEC4LAND_CONFIG = Object.assign({}, baseConfig, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
+
+// Carrega automaticamente o config.local.js se existir na pasta
+(function() {
+  if (typeof document !== 'undefined' && !window._dec4landLocalConfigLoaded) {
+    window._dec4landLocalConfigLoaded = true;
+    const s = document.createElement('script');
+    s.src = 'config.local.js';
+    s.onload = function() {
+      if (window.DEC4LAND_LOCAL_CONFIG) {
+        window.DEC4LAND_CONFIG = Object.assign({}, window.DEC4LAND_CONFIG, window.DEC4LAND_LOCAL_CONFIG);
+      }
+    };
+    s.onerror = function() {
+      // Arquivo opcional: sem erro se não existir
+    };
+    document.head.appendChild(s);
+  }
+})();
+

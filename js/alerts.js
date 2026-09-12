@@ -4,7 +4,21 @@
   class AlertAudioSynth {
     constructor() {
       this.ctx = null;
-      this.muted = false;
+      // Áudio centralizado exclusivamente em alerts.html e index.html (painel de testes)
+      // Nas demais cenas de sobreposição, o áudio local é silenciado por padrão para eliminar eco/flanger no OBS
+      const path = (window.location.pathname || '').toLowerCase();
+      const isMasterAudioScene = path.includes('alerts.html') || path.includes('index.html') || path === '' || path === '/';
+      const urlParams = new URLSearchParams(window.location.search);
+      const forceAudio = urlParams.get('audio') === '1' || urlParams.get('sound') === '1';
+      const forceMute = urlParams.get('audio') === '0' || urlParams.get('sound') === '0' || urlParams.get('mute') === '1';
+
+      if (forceMute) {
+        this.muted = true;
+      } else if (forceAudio) {
+        this.muted = false;
+      } else {
+        this.muted = !isMasterAudioScene;
+      }
     }
 
     init() {
@@ -272,7 +286,7 @@
         alertBox.innerHTML = `
           <div class="alert-mascot-avatar">
             <div class="alert-ring-pulse"></div>
-            <img src="assets/mascot.png" alt="DEC4LAND Mascote" class="alert-mascot-img">
+            <img src="assets/mascot.webp" alt="DEC4LAND Mascote" class="alert-mascot-img">
           </div>
 
           <div class="alert-content">
@@ -356,75 +370,33 @@
 
   window.dec4landAlertManager = manager;
 
-  // Universal Twitch IRC listener for scenes running without gameplay.js (starting, ending, alerts.html)
+  // Universal Twitch IRC listener using shared TwitchIrcClient
   setTimeout(() => {
-    if (window._dec4landTwitchIrcConnected) return; // gameplay.js handles its own connection
+    if (window._dec4landTwitchIrcConnected) return;
     window._dec4landTwitchIrcConnected = true;
 
     const urlParams = new URLSearchParams(window.location.search);
     const channel = (urlParams.get('channel') || localStorage.getItem('dec4land_twitch_channel') || 'dec4land').toLowerCase().replace('#', '');
 
-    try {
-      const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-      ws.onopen = () => {
-        ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-        ws.send('PASS SCHMOOPIIE');
-        ws.send('NICK justinfan' + Math.floor(Math.random() * 80000 + 10000));
-        ws.send('JOIN #' + channel);
-      };
-      ws.onmessage = (e) => {
-        const lines = e.data.split('\r\n');
-        lines.forEach(line => {
-          if (line.startsWith('PING')) {
-            ws.send('PONG :tmi.twitch.tv');
-            return;
+    if (window.TwitchIrcClient) {
+      const irc = new window.TwitchIrcClient({
+        channel: channel,
+        onNotice: (notice) => {
+          if (notice.msgId === 'sub' || notice.msgId === 'resub') {
+            window.triggerTwitchAlert({ type: 'sub', user: notice.user, detail: `assinou o canal! (${notice.months} meses)`, message: notice.message });
+          } else if (notice.msgId === 'subgift' || notice.msgId === 'anonsubgift') {
+            window.triggerTwitchAlert({ type: 'sub', user: notice.user, detail: `presenteou um Sub para ${notice.recipient}!` });
+          } else if (notice.msgId === 'raid') {
+            window.triggerTwitchAlert({ type: 'raid', user: notice.user, amount: notice.viewers, detail: `chegou com ${notice.viewers} espectadores!` });
           }
-          if (line.includes(' USERNOTICE ')) {
-            let tags = {};
-            if (line.startsWith('@')) {
-              const sp = line.indexOf(' ');
-              line.substring(1, sp).split(';').forEach(t => {
-                const eq = t.indexOf('=');
-                if (eq !== -1) tags[t.substring(0, eq)] = t.substring(eq + 1);
-              });
-            }
-            const colon = line.indexOf(' :');
-            const msg = colon !== -1 ? line.substring(colon + 2) : '';
-            const msgId = tags['msg-id'];
-            const user = tags['display-name'] || tags['login'] || 'Viewer';
-            const months = tags['msg-param-cumulative-months'] || '1';
-
-            if (msgId === 'sub' || msgId === 'resub') {
-              window.triggerTwitchAlert({ type: 'sub', user, detail: `assinou o canal! (${months} meses)`, message: msg });
-            } else if (msgId === 'subgift' || msgId === 'anonsubgift') {
-              const rec = tags['msg-param-recipient-display-name'] || 'um espectador';
-              window.triggerTwitchAlert({ type: 'sub', user, detail: `presenteou um Sub para ${rec}!` });
-            } else if (msgId === 'raid') {
-              const viewers = tags['msg-param-viewerCount'] || '10';
-              window.triggerTwitchAlert({ type: 'raid', user, amount: viewers, detail: `chegou com ${viewers} espectadores!` });
-            }
+        },
+        onMessage: (msg) => {
+          if (msg.bits) {
+            window.triggerTwitchAlert({ type: 'bits', user: msg.displayName || msg.username, amount: msg.bits, message: msg.message });
           }
-          if (line.includes(' PRIVMSG ') && line.includes('bits=')) {
-            let tags = {};
-            if (line.startsWith('@')) {
-              const sp = line.indexOf(' ');
-              line.substring(1, sp).split(';').forEach(t => {
-                const eq = t.indexOf('=');
-                if (eq !== -1) tags[t.substring(0, eq)] = t.substring(eq + 1);
-              });
-            }
-            if (tags['bits']) {
-              const colon = line.indexOf(' :');
-              const msg = colon !== -1 ? line.substring(colon + 2) : '';
-              const user = tags['display-name'] || tags['login'] || 'Viewer';
-              window.triggerTwitchAlert({ type: 'bits', user, amount: tags['bits'], message: msg });
-            }
-          }
-        });
-      };
-      ws.onclose = () => {
-        window._dec4landTwitchIrcConnected = false;
-      };
-    } catch(err) {}
+        }
+      });
+      irc.connect();
+    }
   }, 600);
 })(window);

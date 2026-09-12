@@ -6,13 +6,9 @@
   <title>DEC4LAND - Gameplay Overlay</title>
   <link rel="stylesheet" href="css/shared.css">
   <link rel="stylesheet" href="css/gameplay.css">
-  <link rel="stylesheet" href="css/alerts.css">
   <script src="config.js"></script>
 </head>
 <body class="gameplay-body">
-  <!-- Twitch Alert Popup Layer -->
-  <div class="alert-container"></div>
-
   <!-- HUD Container (100% transparent for game window) -->
   <div class="gameplay-hud">
 
@@ -43,7 +39,7 @@
         <div class="webcam-brand-bar">
           <div class="brand-left">
             <div class="mini-mascot-ring">
-              <img src="assets/mascot.png" alt="DEC4LAND" class="mini-mascot-img">
+              <img src="assets/mascot.webp" alt="DEC4LAND" class="mini-mascot-img">
             </div>
             <div class="brand-name-group">
               <span class="streamer-name-animated">DEC4LAND</span>
@@ -92,8 +88,7 @@
 
   </div>
 
-  <script src="js/alerts.js"></script>
+  <script src="js/twitch-irc.js"></script>
   <script src="js/gameplay.js"></script>
-  <script src="js/eventsub.js"></script>
 </body>
 </html>

@@ -21,3 +21,6 @@ Thumbs.db
 .vscode/
 .idea/
 node_modules/
+
+# Configurações locais privadas com tokens e credenciais
+config.local.js

@@ -116,10 +116,6 @@
           else if (type === 'donate' || type === 'pix') window.updateDonate(p.user, p.amount || 'R$ 10,00');
           else if (type === 'sub' || type === 'resub') window.updateSub(p.user, p.months);
           else if (type === 'bits' || type === 'cheer') window.updateDonate(p.user, `${p.amount || 100} bits`);
-
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert(p);
-          }
         } else if (e.data.action === 'update_hud_info') {
           if (e.data.follower) window.updateFollower(e.data.follower);
           if (e.data.donate) window.updateDonate(e.data.donate);
@@ -213,10 +209,10 @@
       if (data.badges.subscriber) badgesHtml += '<span class="chat-badge-icon chat-badge-sub">SUB</span>';
     }
 
-    let parsedText = sanitize(data.message);
+    let parsedText = data.emotesHtml || sanitize(data.message);
 
-    // Emotes parsing if available
-    if (data.emotes && typeof data.emotes === 'object') {
+    // Fallback de parsing de emotes se passado como objeto
+    if (!data.emotesHtml && data.emotes && typeof data.emotes === 'object') {
       const replacements = [];
       Object.keys(data.emotes).forEach(id => {
         const ranges = data.emotes[id];
@@ -256,96 +252,32 @@
     chatViewport.scrollTop = chatViewport.scrollHeight;
   }
 
-  // Connect to Twitch Chat via anonymous WebSocket IRC
+  // Connect to Twitch Chat via Shared TwitchIrcClient
+  let twitchIrc = null;
   function connectTwitchChat() {
-    setChatStatus('connecting', 'CONECTANDO...');
-    let ws;
-    try {
-      ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-    } catch (e) {
-      setChatStatus('error', 'FALHA DE REDE');
+    if (!window.TwitchIrcClient) {
+      console.warn('[React Chat] TwitchIrcClient não encontrado.');
       return;
     }
 
-    ws.onopen = function() {
-      ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-      ws.send('PASS SCHMOOPIIE');
-      const randomNick = 'justinfan' + Math.floor(Math.random() * 80000 + 10000);
-      ws.send(`NICK ${randomNick}`);
-      ws.send(`JOIN #${twitchChannel}`);
-      setChatStatus('connected', 'AO VIVO');
-      console.log(`[React Chat] Conectado ao canal #${twitchChannel}`);
-    };
+    twitchIrc = new window.TwitchIrcClient({
+      channel: twitchChannel,
+      onStatusChange: (status, text) => {
+        setChatStatus(status, text);
+      },
+      onMessage: (msg) => {
+        appendChatMessage({
+          username: msg.username,
+          displayName: msg.displayName,
+          message: msg.message,
+          color: msg.color,
+          badges: msg.badgesMap,
+          emotesHtml: msg.emotesHtml
+        });
+      }
+    });
 
-    ws.onmessage = function(event) {
-      const lines = event.data.split('\r\n');
-      lines.forEach(line => {
-        if (!line) return;
-        if (line.startsWith('PING')) {
-          ws.send('PONG :tmi.twitch.tv');
-          return;
-        }
-
-        if (line.includes(' PRIVMSG ')) {
-          let tags = {};
-          let rest = line;
-          if (line.startsWith('@')) {
-            const spaceIdx = line.indexOf(' ');
-            const rawTags = line.substring(1, spaceIdx).split(';');
-            rawTags.forEach(t => {
-              const eq = t.indexOf('=');
-              if (eq !== -1) tags[t.substring(0, eq)] = t.substring(eq + 1);
-            });
-            rest = line.substring(spaceIdx + 1);
-          }
-
-          const msgMatch = rest.match(/PRIVMSG #[^\s]+ :(.*)$/);
-          const messageText = msgMatch ? msgMatch[1] : '';
-
-          const userMatch = rest.match(/:([^!]+)!/);
-          const username = userMatch ? userMatch[1] : (tags['display-name'] || 'viewer');
-          const displayName = tags['display-name'] || username;
-          const color = tags['color'] || '';
-
-          const badges = {};
-          if (tags['badges']) {
-            tags['badges'].split(',').forEach(b => {
-              const [bName] = b.split('/');
-              badges[bName] = true;
-            });
-          }
-
-          // Parse Twitch IRC emotes tag: "25:0-4,12-16/1902:6-10"
-          const parsedEmotes = {};
-          if (tags['emotes']) {
-            tags['emotes'].split('/').forEach(part => {
-              const [id, ranges] = part.split(':');
-              if (id && ranges) {
-                parsedEmotes[id] = ranges.split(',');
-              }
-            });
-          }
-
-          appendChatMessage({
-            username,
-            displayName,
-            message: messageText,
-            color,
-            badges,
-            emotes: parsedEmotes
-          });
-        }
-      });
-    };
-
-    ws.onerror = function() {
-      setChatStatus('error', 'ERRO NO CHAT');
-    };
-
-    ws.onclose = function() {
-      setChatStatus('error', 'DESCONECTADO');
-      setTimeout(connectTwitchChat, 5000);
-    };
+    twitchIrc.connect();
   }
 
   // Simulator helper for testing chat in browser / OBS

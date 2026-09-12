@@ -22,7 +22,7 @@
 
     // Retorna credenciais combinando config.js, localStorage e URL
     getCredentials() {
-      const cfg = window.DEC4LAND_CONFIG || {};
+      const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
       const urlParams = new URLSearchParams(window.location.search);
 
       const clientId = (

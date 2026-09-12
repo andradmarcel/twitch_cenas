@@ -23,7 +23,7 @@
           <div class="stinger-center-content">
             <div class="stinger-mascot-ring">
               <div class="stinger-pulse-circle"></div>
-              <img src="assets/mascot.png" alt="DEC4LAND" class="stinger-mascot-img">
+              <img src="assets/mascot.webp" alt="DEC4LAND" class="stinger-mascot-img">
             </div>
             <div class="stinger-title-wrap">
               <h2 class="stinger-title">DEC4LAND</h2>
