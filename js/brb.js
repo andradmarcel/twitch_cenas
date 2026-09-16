@@ -1,8 +1,8 @@
 // DEC4LAND BRB Scene Controller (Já Volto)
-(function() {
+(function () {
   // 1. URL Parameters handling: e.g. brb.html?time=3&title=JA+VOLTO
   const urlParams = new URLSearchParams(window.location.search);
-  const initialMinutes = parseInt(urlParams.get('time') || '3', 10);
+  const initialMinutes = parseInt(urlParams.get('time') || '60', 10);
   const customTitle = urlParams.get('title');
 
   if (customTitle) {
@@ -119,20 +119,82 @@
     }, 180);
   }
 
-  // Keyboard controls for streamer
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') {
+  function addMinutes(mins) {
+    const secondsDelta = mins * 60;
+    if (isCountDown) {
+      if (remainingSeconds + secondsDelta < 10) return;
+      totalSeconds = Math.max(10, totalSeconds + secondsDelta);
+      remainingSeconds = Math.max(0, remainingSeconds + secondsDelta);
+    } else {
+      elapsedSeconds = Math.max(0, elapsedSeconds + secondsDelta);
+    }
+    updateTimerDisplay();
+  }
+
+  function togglePause() {
+    if (isRunning) {
+      clearInterval(timerInterval);
+      isRunning = false;
+      if (timerModeLabel) timerModeLabel.textContent = 'PAUSADO';
+    } else {
+      timerInterval = setInterval(tick, 1000);
+      isRunning = true;
+      if (timerModeLabel) timerModeLabel.textContent = isCountDown ? 'REGRESSIVO' : 'TEMPO AFK';
+    }
+    const pauseBtn = document.getElementById('btn-time-pause');
+    if (pauseBtn) pauseBtn.textContent = isRunning ? 'PAUSAR' : 'RETOMAR';
+  }
+
+  // Focus window and body so OBS "Interagir" window immediately catches keypresses
+  function ensureFocus() {
+    window.focus();
+    if (document.body) {
+      document.body.focus();
+    }
+  }
+  ensureFocus();
+  document.addEventListener('click', ensureFocus, true);
+  window.addEventListener('focus', ensureFocus);
+
+  // Keyboard controls for streamer (OBS Interagir)
+  function handleKeyDown(e) {
+    const code = e.code || '';
+    const key = e.key || '';
+    const keyCode = e.keyCode || 0;
+
+    const isUp = code === 'ArrowUp' || key === 'ArrowUp' || key === 'Up' || keyCode === 38;
+    const isDown = code === 'ArrowDown' || key === 'ArrowDown' || key === 'Down' || keyCode === 40;
+    const isRight = code === 'ArrowRight' || key === 'ArrowRight' || key === 'Right' || keyCode === 39;
+    const isLeft = code === 'ArrowLeft' || key === 'ArrowLeft' || key === 'Left' || keyCode === 37;
+    const isPlus = key === '+' || key === '=' || code === 'NumpadAdd';
+    const isMinus = key === '-' || key === '_' || code === 'NumpadSubtract';
+    const isSpace = code === 'Space' || key === ' ' || key === 'Spacebar' || keyCode === 32;
+    const isR = code === 'KeyR' || key === 'r' || key === 'R' || keyCode === 82;
+    const isM = code === 'KeyM' || key === 'm' || key === 'M' || keyCode === 77;
+
+    if (isUp || isPlus) {
       e.preventDefault();
-      if (isRunning) {
-        clearInterval(timerInterval);
-        isRunning = false;
-        if (timerModeLabel) timerModeLabel.textContent = 'PAUSADO';
-      } else {
-        timerInterval = setInterval(tick, 1000);
-        isRunning = true;
-        if (timerModeLabel) timerModeLabel.textContent = isCountDown ? 'REGRESSIVO' : 'TEMPO AFK';
-      }
-    } else if (e.code === 'KeyR') {
+      e.stopPropagation();
+      addMinutes(1);
+    } else if (isDown || isMinus) {
+      e.preventDefault();
+      e.stopPropagation();
+      addMinutes(-1);
+    } else if (isRight) {
+      e.preventDefault();
+      e.stopPropagation();
+      addMinutes(5);
+    } else if (isLeft) {
+      e.preventDefault();
+      e.stopPropagation();
+      addMinutes(-5);
+    } else if (isSpace) {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePause();
+    } else if (isR) {
+      e.preventDefault();
+      e.stopPropagation();
       remainingSeconds = totalSeconds;
       elapsedSeconds = 0;
       updateTimerDisplay();
@@ -141,21 +203,18 @@
         isRunning = true;
       }
       if (timerModeLabel) timerModeLabel.textContent = isCountDown ? 'REGRESSIVO' : 'TEMPO AFK';
-    } else if (e.code === 'KeyM') {
-      // Toggle countdown / count-up
+    } else if (isM) {
+      e.preventDefault();
+      e.stopPropagation();
       isCountDown = !isCountDown;
       if (timerModeLabel) timerModeLabel.textContent = isCountDown ? 'REGRESSIVO' : 'TEMPO AFK';
       updateTimerDisplay();
-    } else if (e.code === 'ArrowUp') {
-      totalSeconds += 60;
-      remainingSeconds += 60;
-      updateTimerDisplay();
-    } else if (e.code === 'ArrowDown' && remainingSeconds > 60) {
-      totalSeconds -= 60;
-      remainingSeconds -= 60;
-      updateTimerDisplay();
     }
-  });
+  }
+
+  // Register in capturing phase on both window and document so OBS cannot drop it
+  window.addEventListener('keydown', handleKeyDown, true);
+  document.addEventListener('keydown', handleKeyDown, true);
 
   // Start timer loop
   updateTimerDisplay();

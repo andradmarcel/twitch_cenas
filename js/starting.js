@@ -69,34 +69,85 @@
     }
   }, 8000);
 
-  // Keyboard controls for streamer / testing
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') {
+  function addMinutes(mins) {
+    const secondsDelta = mins * 60;
+    if (remainingSeconds + secondsDelta < 10) return;
+    totalSeconds = Math.max(10, totalSeconds + secondsDelta);
+    remainingSeconds = Math.max(0, remainingSeconds + secondsDelta);
+    updateTimerDisplay();
+  }
+
+  function togglePause() {
+    if (isRunning) {
+      clearInterval(timerInterval);
+      isRunning = false;
+    } else {
+      timerInterval = setInterval(tick, 1000);
+      isRunning = true;
+    }
+  }
+
+  // Focus window and body so OBS "Interagir" window immediately catches keypresses
+  function ensureFocus() {
+    window.focus();
+    if (document.body) {
+      document.body.focus();
+    }
+  }
+  ensureFocus();
+  document.addEventListener('click', ensureFocus, true);
+  window.addEventListener('focus', ensureFocus);
+
+  // Keyboard controls for streamer (OBS Interagir)
+  function handleKeyDown(e) {
+    const code = e.code || '';
+    const key = e.key || '';
+    const keyCode = e.keyCode || 0;
+
+    const isUp = code === 'ArrowUp' || key === 'ArrowUp' || key === 'Up' || keyCode === 38;
+    const isDown = code === 'ArrowDown' || key === 'ArrowDown' || key === 'Down' || keyCode === 40;
+    const isRight = code === 'ArrowRight' || key === 'ArrowRight' || key === 'Right' || keyCode === 39;
+    const isLeft = code === 'ArrowLeft' || key === 'ArrowLeft' || key === 'Left' || keyCode === 37;
+    const isPlus = key === '+' || key === '=' || code === 'NumpadAdd';
+    const isMinus = key === '-' || key === '_' || code === 'NumpadSubtract';
+    const isSpace = code === 'Space' || key === ' ' || key === 'Spacebar' || keyCode === 32;
+    const isR = code === 'KeyR' || key === 'r' || key === 'R' || keyCode === 82;
+
+    if (isUp || isPlus) {
       e.preventDefault();
-      if (isRunning) {
-        clearInterval(timerInterval);
-        isRunning = false;
-      } else {
-        timerInterval = setInterval(tick, 1000);
-        isRunning = true;
-      }
-    } else if (e.code === 'KeyR') {
+      e.stopPropagation();
+      addMinutes(1);
+    } else if (isDown || isMinus) {
+      e.preventDefault();
+      e.stopPropagation();
+      addMinutes(-1);
+    } else if (isRight) {
+      e.preventDefault();
+      e.stopPropagation();
+      addMinutes(5);
+    } else if (isLeft) {
+      e.preventDefault();
+      e.stopPropagation();
+      addMinutes(-5);
+    } else if (isSpace) {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePause();
+    } else if (isR) {
+      e.preventDefault();
+      e.stopPropagation();
       remainingSeconds = totalSeconds;
       updateTimerDisplay();
       if (!isRunning) {
         timerInterval = setInterval(tick, 1000);
         isRunning = true;
       }
-    } else if (e.code === 'ArrowUp') {
-      totalSeconds += 60;
-      remainingSeconds += 60;
-      updateTimerDisplay();
-    } else if (e.code === 'ArrowDown' && remainingSeconds > 60) {
-      totalSeconds -= 60;
-      remainingSeconds -= 60;
-      updateTimerDisplay();
     }
-  });
+  }
+
+  // Register in capturing phase on both window and document so OBS cannot drop it
+  window.addEventListener('keydown', handleKeyDown, true);
+  document.addEventListener('keydown', handleKeyDown, true);
 
   // Start timer
   updateTimerDisplay();
