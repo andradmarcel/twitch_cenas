@@ -10,15 +10,17 @@
     webcamModule.classList.add(`pos-${pos}`);
   }
 
+  const cfg = window.DEC4LAND_CONFIG || {};
+
   // Custom streamer name
-  const customName = urlParams.get('name') || localStorage.getItem('dec4land_streamer_name');
+  const customName = urlParams.get('name') || cfg.streamerName || localStorage.getItem('dec4land_streamer_name');
   if (customName) {
     const streamerNameEl = document.querySelector('.streamer-name-animated');
     if (streamerNameEl) streamerNameEl.textContent = customName;
   }
 
   // Custom social handle
-  const customSocial = urlParams.get('social') || localStorage.getItem('dec4land_social_handle');
+  const customSocial = urlParams.get('social') || cfg.socialTwitter || localStorage.getItem('dec4land_social_handle');
   if (customSocial) {
     const socialEl = document.querySelector('.brand-social-pill');
     if (socialEl) socialEl.textContent = customSocial;
@@ -33,10 +35,10 @@
   const pillDonate = document.getElementById('pill-donate');
   const pillSub = document.getElementById('pill-sub');
 
-  // Load real values: Priority 1) URL Params, 2) localStorage, 3) Default dash '-'
-  const realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower');
-  const realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate');
-  const realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub');
+  // Load real values: Priority 1) URL Params, 2) localStorage, 3) Config file
+  const realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower') || cfg.latestFollower || '';
+  const realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || cfg.latestDonate || '';
+  const realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '';
 
   if (realFollower && followerEl) followerEl.textContent = realFollower;
   if (realDonate && donateEl) donateEl.textContent = realDonate;
@@ -202,7 +204,6 @@
     }, 9000);
   }
 
-  const cfg = window.DEC4LAND_CONFIG || {};
   const twitchChannel = (urlParams.get('channel') || cfg.twitchChannel || localStorage.getItem('dec4land_twitch_channel') || 'dec4land').toLowerCase().replace(/^@|^#/, '');
 
   // Conexão Twitch IRC via Shared TwitchIrcClient para captura de Subs, Raids e Bits

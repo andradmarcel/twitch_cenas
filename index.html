@@ -1115,6 +1115,14 @@
       currentScene = sceneName;
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
+      const sF = localStorage.getItem('dec4land_real_follower');
+      const sD = localStorage.getItem('dec4land_real_donate');
+      const sS = localStorage.getItem('dec4land_real_sub');
+      let hudParams = '?channel=' + encodeURIComponent(currentChannel);
+      if (sF) hudParams += '&follow=' + encodeURIComponent(sF);
+      if (sD) hudParams += '&donate=' + encodeURIComponent(sD);
+      if (sS) hudParams += '&sub=' + encodeURIComponent(sS);
+
       if (sceneName === 'starting') {
         const btn = document.querySelector('.tab-btn:nth-child(1)');
         if (btn) btn.classList.add('active');
@@ -1125,10 +1133,10 @@
       } else if (sceneName === 'gameplay') {
         const btn = document.querySelector('.tab-btn:nth-child(2)');
         if (btn) btn.classList.add('active');
-        iframe.src = 'gameplay.html?channel=' + encodeURIComponent(currentChannel);
+        iframe.src = 'gameplay.html' + hudParams;
         mockGame.style.display = 'block';
         titleEl.textContent = 'CENA: GAMEPLAY OVERLAY (Twitch #' + currentChannel.toUpperCase() + ')';
-        btnFullscreen.href = 'gameplay.html?channel=' + encodeURIComponent(currentChannel);
+        btnFullscreen.href = 'gameplay.html' + hudParams;
       } else if (sceneName === 'brb') {
         const btn = document.querySelector('.tab-btn:nth-child(3)');
         if (btn) btn.classList.add('active');
@@ -1146,17 +1154,17 @@
       } else if (sceneName === 'conversa') {
         const btn = document.querySelector('.tab-btn:nth-child(5)');
         if (btn) btn.classList.add('active');
-        iframe.src = 'conversa.html?channel=' + encodeURIComponent(currentChannel);
+        iframe.src = 'conversa.html' + hudParams;
         mockGame.style.display = 'none';
         titleEl.textContent = 'CENA: CONVERSA / JUST CHATTING (Twitch #' + currentChannel.toUpperCase() + ')';
-        btnFullscreen.href = 'conversa.html?channel=' + encodeURIComponent(currentChannel);
+        btnFullscreen.href = 'conversa.html' + hudParams;
       } else if (sceneName === 'react') {
         const btn = document.querySelector('.tab-btn:nth-child(6)');
         if (btn) btn.classList.add('active');
-        iframe.src = 'react.html?channel=' + encodeURIComponent(currentChannel);
+        iframe.src = 'react.html' + hudParams;
         mockGame.style.display = 'none';
         titleEl.textContent = 'CENA: REACT & APRESENTAÇÃO (Twitch #' + currentChannel.toUpperCase() + ')';
-        btnFullscreen.href = 'react.html?channel=' + encodeURIComponent(currentChannel);
+        btnFullscreen.href = 'react.html' + hudParams;
       }
     }
 
@@ -1165,6 +1173,12 @@
       let targetUrl = base + currentScene + '.html';
       if (currentScene === 'gameplay' || currentScene === 'conversa' || currentScene === 'react') {
         targetUrl += '?channel=' + encodeURIComponent(currentChannel);
+        const sF = localStorage.getItem('dec4land_real_follower');
+        const sD = localStorage.getItem('dec4land_real_donate');
+        const sS = localStorage.getItem('dec4land_real_sub');
+        if (sF) targetUrl += '&follow=' + encodeURIComponent(sF);
+        if (sD) targetUrl += '&donate=' + encodeURIComponent(sD);
+        if (sS) targetUrl += '&sub=' + encodeURIComponent(sS);
       }
       navigator.clipboard.writeText(targetUrl).then(() => {
         alert('URL copiada para a área de transferência:\n' + targetUrl + '\n\nBasta colar como Navegador (Browser Source) no OBS Studio!');

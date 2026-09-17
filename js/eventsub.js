@@ -375,7 +375,7 @@
         token
       );
 
-      // 5. Alerta de Raid Entrante (channel.raid v1)
+      // 5. Alerta de Raid (channel.raid v1 - sem escopo adicional obrigatório)
       await this.subscribeHelixEvent(
         'channel.raid',
         '1',
@@ -384,7 +384,103 @@
         token
       );
 
+      // Consulta o seguidor e o sub mais recentes já existentes no canal para preencher a moldura imediatamente
+      this.fetchLatestFollower(clientId, token);
+      this.fetchLatestSub(clientId, token);
+
       return true;
+    }
+
+    // Consulta o sub mais recente existente no canal na Twitch Helix API
+    async fetchLatestSub(clientId, token) {
+      // Se já houver um sub configurado ou salvo localmente, prioriza ele
+      const currentSavedSub = localStorage.getItem('dec4land_real_sub') || window.DEC4LAND_CONFIG?.latestSub;
+      if (currentSavedSub && currentSavedSub !== '-') {
+        if (typeof window.updateSub === 'function') {
+          window.updateSub(currentSavedSub);
+        }
+        return currentSavedSub;
+      }
+
+      if (!this.broadcasterId || !token || !clientId) return null;
+      try {
+        const url = `https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.broadcasterId}&first=1`;
+        const res = await fetch(url, {
+          headers: {
+            'Client-Id': clientId,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && json.data.length > 0) {
+            const sub = json.data[0];
+            const subName = sub.user_name || sub.user_login;
+            if (subName) {
+              console.log(`[EventSub] 💎 Último sub carregado da Twitch: ${subName}`);
+              if (typeof window.updateSub === 'function') {
+                window.updateSub(subName);
+              }
+              try {
+                localStorage.setItem('dec4land_real_sub', subName);
+                if ('BroadcastChannel' in window) {
+                  const bc = new BroadcastChannel('dec4land_stream_alerts');
+                  bc.postMessage({
+                    action: 'update_hud_info',
+                    sub: subName
+                  });
+                }
+              } catch(e) {}
+              return subName;
+            }
+          }
+        }
+      } catch(err) {
+        console.warn('[EventSub] Erro ao consultar último sub via Helix:', err);
+      }
+      return null;
+    }
+
+    // Consulta o seguidor mais recente existente no canal na Twitch Helix API
+    async fetchLatestFollower(clientId, token) {
+      if (!this.broadcasterId || !token || !clientId) return null;
+      try {
+        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.broadcasterId}&first=1`;
+        const res = await fetch(url, {
+          headers: {
+            'Client-Id': clientId,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && json.data.length > 0) {
+            const followerName = json.data[0].user_name || json.data[0].user_login;
+            if (followerName) {
+              console.log(`[EventSub] ★ Último seguidor carregado da Twitch: ${followerName}`);
+              if (typeof window.updateFollower === 'function') {
+                window.updateFollower(followerName);
+              }
+              try {
+                localStorage.setItem('dec4land_real_follower', followerName);
+                if ('BroadcastChannel' in window) {
+                  const bc = new BroadcastChannel('dec4land_stream_alerts');
+                  bc.postMessage({
+                    action: 'update_hud_info',
+                    follower: followerName
+                  });
+                }
+              } catch(e) {}
+              return followerName;
+            }
+          }
+        } else {
+          console.warn('[EventSub] Aviso ao obter último seguidor via Helix:', res.status);
+        }
+      } catch(err) {
+        console.warn('[EventSub] Erro ao consultar último seguidor via Helix:', err);
+      }
+      return null;
     }
 
     // Roteia eventos recebidos da Twitch diretamente para os alertas e letreiros
