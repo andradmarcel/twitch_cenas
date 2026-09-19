@@ -6,7 +6,7 @@
   <title>DEC4LAND - Cena de Conversa (Just Chatting)</title>
   <link rel="stylesheet" href="css/shared.css">
   <link rel="stylesheet" href="css/conversa.css">
-  <link rel="stylesheet" href="css/alerts.css">
+  <script src="config.local.js"></script>
   <script src="config.js"></script>
 </head>
 <body class="conversa-body">
@@ -24,9 +24,6 @@
   </svg>
 
   <div class="scene-container conversa-scene-container" id="conversa-scene">
-    <!-- Twitch Alert Popup Layer -->
-    <div class="alert-container"></div>
-
     <!-- Camada de Fundo Cibernético (Mascarada para furar o buraco da webcam) -->
     <div class="conversa-ambient-layer">
       <div class="conversa-ambient-gradient"></div>
@@ -220,7 +217,6 @@
 
   <!-- Scene Scripts -->
   <script src="js/particles.js"></script>
-  <script src="js/alerts.js"></script>
   <script src="js/twitch-irc.js"></script>
   <script src="js/conversa.js"></script>
   <script src="js/eventsub.js"></script>

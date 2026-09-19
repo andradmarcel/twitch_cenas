@@ -7,17 +7,26 @@
     constructor() {
       this.ws = null;
       this.sessionId = null;
-      this.broadcasterId = null;
+      this.broadcasterId = '227485020'; // ID oficial do canal dec4land
       this.status = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error' | 'unconfigured'
       this.statusMessage = '';
       this.reconnectAttempts = 0;
-      this.maxReconnectAttempts = 10;
+      this.maxReconnectAttempts = Infinity;
       this.reconnectTimer = null;
       this.keepaliveTimer = null;
       this.statusListeners = new Set();
       this.activeSubscriptions = new Set();
+      this.lastKnownFollower = localStorage.getItem('dec4land_real_follower') || window.DEC4LAND_CONFIG?.latestFollower || window.DEC4LAND_LOCAL_CONFIG?.latestFollower || 'drxxxfps';
 
       this.initBroadcastSync();
+
+      // Reconecta assim que credenciais locais forem carregadas
+      window.addEventListener('dec4land_config_updated', () => {
+        if (this.status !== 'connected') {
+          console.log('[EventSub] Configuração local detectada! Conectando...');
+          this.connect();
+        }
+      });
     }
 
     // Retorna credenciais combinando config.js, localStorage e URL
@@ -108,8 +117,17 @@
       if (!clientId || !token) {
         this.setStatus('unconfigured', 'Credenciais EventSub (Client ID ou Token) não configuradas.');
         console.log('[EventSub] Alertas de Follow aguardando Client ID e Token OAuth.');
+        if (!this._configRetryTimer) {
+          this._configRetryTimer = setTimeout(() => {
+            this._configRetryTimer = null;
+            this.connect();
+          }, 1500);
+        }
         return;
       }
+
+      // Inicia imediatamente o Watchdog contínuo via API Helix em paralelo (resiliência total)
+      this.startPeriodicSync();
 
       if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
         if (!reconnectUrl) {
@@ -171,18 +189,18 @@
         } catch(e) {}
         this.ws = null;
       }
+      if (this.syncInterval) {
+        clearInterval(this.syncInterval);
+        this.syncInterval = null;
+      }
       this.setStatus('disconnected', 'Desconectado manualmente.');
     }
 
     scheduleReconnect() {
       if (this.reconnectTimer) return;
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.warn('[EventSub] Limite máximo de tentativas de reconexão atingido.');
-        return;
-      }
 
       this.reconnectAttempts++;
-      const delay = Math.min(30000, 2000 * Math.pow(1.5, this.reconnectAttempts));
+      const delay = Math.min(15000, 2000 * Math.pow(1.3, Math.min(this.reconnectAttempts, 8)));
       console.log(`[EventSub] Tentando reconectar em ${(delay / 1000).toFixed(1)}s (Tentativa ${this.reconnectAttempts})...`);
       
       this.reconnectTimer = setTimeout(() => {
@@ -200,10 +218,10 @@
 
     resetKeepalive(timeoutSeconds = 10) {
       this.cleanupKeepalive();
-      // O watchdog dispara se passar do tempo limite esperado + margem de 3 segundos
-      const margin = 3000;
+      // Margem generosa de 45 segundos para nunca derrubar conexões saudáveis por jitter
+      const margin = 45000;
       this.keepaliveTimer = setTimeout(() => {
-        console.warn('[EventSub] Keepalive não recebido no tempo esperado. Reiniciando conexão...');
+        console.warn('[EventSub] Keepalive não recebido no tempo limite. Reconectando...');
         if (this.ws) {
           try { this.ws.close(); } catch(e) {}
         }
@@ -357,6 +375,15 @@
         token
       );
 
+      // Alerta de Inscrição de Presente / Sub Gift (channel.subscription.gift v1)
+      await this.subscribeHelixEvent(
+        'channel.subscription.gift',
+        '1',
+        { broadcaster_user_id: this.broadcasterId },
+        clientId,
+        token
+      );
+
       // 3. Alerta de Renovação de Inscrição com mensagem (channel.subscription.message v1)
       await this.subscribeHelixEvent(
         'channel.subscription.message',
@@ -385,26 +412,52 @@
       );
 
       // Consulta o seguidor e o sub mais recentes já existentes no canal para preencher a moldura imediatamente
-      this.fetchLatestFollower(clientId, token);
-      this.fetchLatestSub(clientId, token);
+      await this.fetchLatestFollower(clientId, token);
+      await this.fetchLatestSub(clientId, token);
+
+      // Inicia sincronizador contínuo (Watchdog de 12s) para garantir 100% de detecção de follows e subs
+      this.startPeriodicSync();
 
       return true;
     }
 
-    // Consulta o sub mais recente existente no canal na Twitch Helix API
-    async fetchLatestSub(clientId, token) {
-      // Se já houver um sub configurado ou salvo localmente, prioriza ele
-      const currentSavedSub = localStorage.getItem('dec4land_real_sub') || window.DEC4LAND_CONFIG?.latestSub;
-      if (currentSavedSub && currentSavedSub !== '-') {
-        if (typeof window.updateSub === 'function') {
-          window.updateSub(currentSavedSub);
-        }
-        return currentSavedSub;
+    startPeriodicSync() {
+      if (this.syncInterval) {
+        clearInterval(this.syncInterval);
       }
 
-      if (!this.broadcasterId || !token || !clientId) return null;
+      // Checagem imediata ao iniciar o sincronizador
+      const initialCreds = this.getCredentials();
+      if (initialCreds.clientId && initialCreds.token) {
+        this.syncFollowerWatchdog(initialCreds.clientId, initialCreds.token);
+      }
+
+      let loopCount = 0;
+      // Checagem a cada 4 segundos na Twitch Helix API (máxima velocidade e confiabilidade)
+      this.syncInterval = setInterval(async () => {
+        const { clientId, token } = this.getCredentials();
+        if (!this.broadcasterId || !clientId || !token) return;
+
+        // Reconecta se o WebSocket foi encerrado pelo OBS em segundo plano
+        if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+          console.log('[EventSub] Reconectando WebSocket inativo...');
+          this.connect();
+        }
+
+        loopCount++;
+        // Sincroniza novos seguidores com a API oficial da Twitch
+        await this.syncFollowerWatchdog(clientId, token);
+
+        // A cada 12s (a cada 3 voltas), atualiza o último sub diretamente da Twitch
+        if (loopCount % 3 === 0) {
+          await this.fetchLatestSub(clientId, token);
+        }
+      }, 4000);
+    }
+
+    async syncFollowerWatchdog(clientId, token) {
       try {
-        const url = `https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.broadcasterId}&first=1`;
+        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.broadcasterId}&first=1`;
         const res = await fetch(url, {
           headers: {
             'Client-Id': clientId,
@@ -414,29 +467,138 @@
         if (res.ok) {
           const json = await res.json();
           if (json.data && json.data.length > 0) {
-            const sub = json.data[0];
-            const subName = sub.user_name || sub.user_login;
-            if (subName) {
-              console.log(`[EventSub] 💎 Último sub carregado da Twitch: ${subName}`);
-              if (typeof window.updateSub === 'function') {
-                window.updateSub(subName);
-              }
-              try {
-                localStorage.setItem('dec4land_real_sub', subName);
-                if ('BroadcastChannel' in window) {
-                  const bc = new BroadcastChannel('dec4land_stream_alerts');
-                  bc.postMessage({
-                    action: 'update_hud_info',
-                    sub: subName
+            const followerName = json.data[0].user_name || json.data[0].user_login;
+            if (followerName) {
+              // Se é diferente do seguidor anterior que já tínhamos visto, dispara alerta e atualiza
+              if (this.lastKnownFollower && this.lastKnownFollower.toLowerCase() !== followerName.toLowerCase()) {
+                console.log(`[EventSub] ★ NOVO SEGUIDOR IDENTIFICADO VIA API: ${followerName} (anterior: ${this.lastKnownFollower})`);
+                if (window.triggerTwitchAlert) {
+                  window.triggerTwitchAlert({
+                    id: `follow_${followerName.toLowerCase()}`,
+                    type: 'follower',
+                    user: followerName,
+                    detail: 'começou a seguir o canal!'
                   });
                 }
-              } catch(e) {}
-              return subName;
+              }
+
+              this.lastKnownFollower = followerName;
+
+              const currentSaved = localStorage.getItem('dec4land_real_follower') || window.DEC4LAND_CONFIG?.latestFollower || '';
+              if (!currentSaved || currentSaved.toLowerCase() !== followerName.toLowerCase()) {
+                if (typeof window.updateFollower === 'function') {
+                  window.updateFollower(followerName);
+                }
+                try {
+                  localStorage.setItem('dec4land_real_follower', followerName);
+                  if ('BroadcastChannel' in window) {
+                    const bc = new BroadcastChannel('dec4land_stream_alerts');
+                    bc.postMessage({ action: 'update_hud_info', follower: followerName });
+                  }
+                } catch(e) {}
+              }
             }
           }
         }
+      } catch(err) {}
+    }
+
+    // Extrai a data ISO real codificada no cursor de paginação da Twitch
+    parseCursorTimestamp(cursor) {
+      if (!cursor) return 0;
+      try {
+        const raw = atob(cursor);
+        const obj = JSON.parse(raw);
+        const cur = obj.b ? obj.b.Cursor : (obj.a ? obj.a.Cursor : '');
+        if (!cur) return 0;
+        const inner = atob(cur);
+        const m = inner.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)/);
+        return m ? new Date(m[1]).getTime() : 0;
+      } catch(e) {
+        return 0;
+      }
+    }
+
+    // Consulta o sub mais recente existente no canal na Twitch Helix API (ordenado cronologicamente)
+    async fetchLatestSub(clientId, token) {
+      if (!this.broadcasterId || !token || !clientId) return null;
+      try {
+        let allSubs = [];
+        let cursor = '';
+        const channelLower = (this.channel || 'dec4land').toLowerCase();
+
+        // Itera buscando os inscritos e suas datas de início reais gravadas nos cursores da Twitch
+        for (let i = 0; i < 15; i++) {
+          const url = `https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.broadcasterId}&first=1${cursor ? '&after=' + encodeURIComponent(cursor) : ''}`;
+          const res = await fetch(url, {
+            headers: {
+              'Client-Id': clientId,
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (!res.ok) break;
+          const json = await res.json();
+          if (!json.data || json.data.length === 0) break;
+
+          const sub = json.data[0];
+          const cursorStr = json.pagination?.cursor || '';
+          sub._timestamp = this.parseCursorTimestamp(cursorStr);
+          allSubs.push(sub);
+
+          cursor = cursorStr;
+          if (!cursor) break;
+        }
+
+        // Filtra a própria conta do streamer (que possui sub vitalício Tier 3 no canal)
+        const validSubs = allSubs.filter(s => {
+          const uId = String(s.user_id || '');
+          const uName = (s.user_name || s.user_login || '').toLowerCase();
+          return uId !== String(this.broadcasterId) && uName !== channelLower && uName !== 'dec4land';
+        });
+
+        // Ordena cronologicamente do mais recente para o mais antigo
+        validSubs.sort((a, b) => (b._timestamp || 0) - (a._timestamp || 0));
+
+        if (validSubs.length > 0) {
+          const sub = validSubs[0];
+          // Se for presente, credita quem deu o presente (gifter)
+          const subName = sub.is_gift && sub.gifter_name 
+            ? `${sub.gifter_name} (Gift)` 
+            : (sub.user_name || sub.user_login);
+
+          if (subName) {
+            console.log(`[EventSub] 💎 Último sub real (cronológico) carregado da Twitch: ${subName}`);
+            if (typeof window.updateSub === 'function') {
+              window.updateSub(subName);
+            }
+            try {
+              localStorage.setItem('dec4land_real_sub', subName);
+              if ('BroadcastChannel' in window) {
+                const bc = new BroadcastChannel('dec4land_stream_alerts');
+                bc.postMessage({
+                  action: 'update_hud_info',
+                  sub: subName
+                });
+              }
+            } catch(e) {}
+            return subName;
+          }
+        }
       } catch(err) {
-        console.warn('[EventSub] Erro ao consultar último sub via Helix:', err);
+        console.warn('[EventSub] Erro ao consultar último sub cronológico via Helix:', err);
+      }
+
+      // Fallback: se a API falhar, usa config ou localStorage válido (nunca Marcel_Gamer)
+      const currentSavedSub = localStorage.getItem('dec4land_real_sub');
+      const fallback = (currentSavedSub && !currentSavedSub.toLowerCase().includes('marcel_gamer')) 
+        ? currentSavedSub 
+        : (window.DEC4LAND_CONFIG?.latestSub || '');
+
+      if (fallback && fallback !== '-' && !fallback.toLowerCase().includes('marcel_gamer')) {
+        if (typeof window.updateSub === 'function') {
+          window.updateSub(fallback);
+        }
+        return fallback;
       }
       return null;
     }
@@ -458,6 +620,9 @@
             const followerName = json.data[0].user_name || json.data[0].user_login;
             if (followerName) {
               console.log(`[EventSub] ★ Último seguidor carregado da Twitch: ${followerName}`);
+              if (!this.lastKnownFollower) {
+                this.lastKnownFollower = followerName;
+              }
               if (typeof window.updateFollower === 'function') {
                 window.updateFollower(followerName);
               }
@@ -493,6 +658,8 @@
           const followerName = event.user_name || event.user_login || 'Novo Seguidor';
           console.log(`[EventSub] ★ NOVO SEGUIDOR REAL: ${followerName}`);
 
+          this.lastKnownFollower = followerName;
+
           // Dispara alerta visual e sonoro DEC4LAND
           if (window.triggerTwitchAlert) {
             window.triggerTwitchAlert({
@@ -523,6 +690,13 @@
         }
 
         case 'channel.subscribe': {
+          // Se for sub de presente (gift), a Twitch envia o evento com is_gift: true para o recebedor.
+          // NÃO disparar alerta individual de sub para o recebedor (apenas quem presenteou deve aparecer).
+          if (event.is_gift) {
+            console.log(`[EventSub] 🎁 Sub de presente recebido por ${event.user_name || event.user_login}. Ignorando alerta individual.`);
+            break;
+          }
+
           const subName = event.user_name || event.user_login || 'Viewer';
           const tier = event.tier === '3000' ? 'Tier 3' : event.tier === '2000' ? 'Tier 2' : 'Tier 1';
           console.log(`[EventSub] 💎 NOVO SUB REAL: ${subName} (${tier})`);
@@ -547,6 +721,43 @@
               bc.postMessage({
                 action: 'update_hud_info',
                 sub: subName
+              });
+            }
+          } catch(e) {}
+          break;
+        }
+
+        case 'channel.subscription.gift': {
+          const gifter = event.is_anonymous ? 'Anônimo' : (event.user_name || event.user_login || 'Alguém');
+          const total = event.total || 1;
+          const tier = event.tier === '3000' ? 'Tier 3' : event.tier === '2000' ? 'Tier 2' : 'Tier 1';
+          const detail = total > 1 
+            ? `presenteou ${total} Subs (${tier}) para a comunidade!` 
+            : `presenteou um Sub (${tier}) para a comunidade!`;
+
+          console.log(`[EventSub] 🎁 SUB DE PRESENTE: ${gifter} deu ${total} sub(s)!`);
+
+          if (window.triggerTwitchAlert) {
+            window.triggerTwitchAlert({
+              id: alertId || `gift_${gifter.toLowerCase()}_${Date.now()}`,
+              type: 'sub',
+              user: gifter,
+              detail: detail,
+              isGift: true
+            });
+          }
+
+          if (typeof window.updateSub === 'function') {
+            window.updateSub(`${gifter} (${total > 1 ? total + 'x Gift' : 'Gift'})`);
+          }
+
+          try {
+            localStorage.setItem('dec4land_real_sub', `${gifter} (Gift)`);
+            if ('BroadcastChannel' in window) {
+              const bc = new BroadcastChannel('dec4land_stream_alerts');
+              bc.postMessage({
+                action: 'update_hud_info',
+                sub: `${gifter} (Gift)`
               });
             }
           } catch(e) {}

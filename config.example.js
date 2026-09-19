@@ -22,6 +22,6 @@ window.DEC4LAND_LOCAL_CONFIG = {
 
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
   latestFollower: "Marcel_Gamer",
-  latestDonate: "Marcel (R$ 50,00)",
+  latestDonate: "-",
   latestSub: "Marcel (Tier 1)"
 };

@@ -68,12 +68,26 @@
   const donateEl = document.getElementById('pill-val-donate');
   const subEl = document.getElementById('pill-val-sub');
 
-  const realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower') || cfg.latestFollower || '-';
-  const realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || cfg.latestDonate || '-';
-  const realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '-';
+  let realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower') || cfg.latestFollower || '-';
+  let realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || cfg.latestDonate || '-';
+  let realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '-';
+
+  // Limpa automaticamente qualquer resquício de teste sintético 'Marcel_Gamer' ou 'Marcel (R$ 50,00)'
+  if (realSub && (realSub.toLowerCase().includes('marcel_gamer') || realSub.toLowerCase() === 'marcel')) {
+    realSub = (cfg.latestSub && !cfg.latestSub.toLowerCase().includes('marcel')) ? cfg.latestSub : '-';
+    try { localStorage.removeItem('dec4land_real_sub'); } catch(e) {}
+  }
+  if (realDonate && (realDonate.toLowerCase().includes('marcel') || realDonate.includes('50,00'))) {
+    realDonate = (cfg.latestDonate && !cfg.latestDonate.toLowerCase().includes('marcel')) ? cfg.latestDonate : '-';
+    try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
+  }
+  if (realFollower && (realFollower.toLowerCase().includes('marcel_gamer') || realFollower.toLowerCase() === 'marcel')) {
+    realFollower = (cfg.latestFollower && !cfg.latestFollower.toLowerCase().includes('marcel')) ? cfg.latestFollower : '-';
+    try { localStorage.removeItem('dec4land_real_follower'); } catch(e) {}
+  }
 
   if (followerEl) followerEl.textContent = realFollower;
-  if (donateEl) donateEl.textContent = realDonate;
+  if (donateEl) donateEl.textContent = realDonate || '-';
   if (subEl) subEl.textContent = realSub;
 
   function updatePill(el, val) {

@@ -16,11 +16,11 @@
   align-items: center;
 }
 
-/* Base Alert Box */
+/* Base Alert Box - Fundo escuro sólido cyberpunk (opaco para alta legibilidade sobre qualquer jogo) */
 .alert-box {
   position: relative;
   width: 100%;
-  background: rgba(10, 3, 8, 0.22); /* Fundo vidro translúcido */
+  background: linear-gradient(135deg, #180512 0%, #0a0207 100%);
   border: 2px solid var(--neon-red);
   border-radius: 14px;
   padding: 24px 32px;
@@ -29,11 +29,9 @@
   align-items: center;
   gap: 26px;
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    0 0 25px var(--neon-red-glow),
-    inset 0 0 20px rgba(255, 26, 75, 0.08);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+    0 14px 40px rgba(0, 0, 0, 0.88),
+    0 0 30px var(--neon-red-glow),
+    inset 0 0 25px rgba(255, 26, 75, 0.12);
   overflow: hidden;
   opacity: 0;
   transform: translateY(-40px) scale(0.92);
@@ -62,6 +60,7 @@
   height: 4px;
   background: linear-gradient(90deg, transparent, #ffffff, var(--neon-red), transparent);
   animation: laserScan 2.5s infinite linear;
+  z-index: 3;
 }
 
 @keyframes laserScan {
@@ -90,7 +89,7 @@
   object-fit: cover;
   border-radius: 50%;
   border: 3px solid var(--neon-red);
-  background: rgba(25, 5, 18, 0.25);
+  background: #14040e;
   box-shadow: 0 0 20px var(--neon-red-glow);
   z-index: 2;
   animation: mascotAlertPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -147,7 +146,7 @@
   line-height: 0.95;
   letter-spacing: 2.5px;
   color: #ffffff;
-  text-shadow: 0 0 20px var(--neon-red-glow);
+  text-shadow: 0 0 20px var(--neon-red-glow), 0 2px 10px rgba(0, 0, 0, 0.95);
   word-break: break-word;
 }
 
@@ -155,10 +154,11 @@
   font-family: var(--font-brand);
   font-size: 17px;
   font-weight: 700;
-  color: var(--text-dim);
+  color: #e5d4de;
   display: flex;
   align-items: center;
   gap: 8px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
 .alert-detail-text b {
@@ -169,7 +169,7 @@
   font-size: 14px;
   line-height: 1.4;
   color: #ffb8c8;
-  background: rgba(255, 26, 75, 0.1);
+  background: rgba(0, 0, 0, 0.55);
   border-left: 3px solid var(--neon-red);
   padding: 8px 14px;
   border-radius: 4px;
@@ -178,96 +178,157 @@
 }
 
 /* ==========================================================================
-   THEMED ALERT VARIANTS
+   THEMED ALERT VARIANTS (Fundos sólidos escuros temáticos, sem transparência)
    ========================================================================== */
 
-/* 1. SEGUIDOR (Follower - Crimson & Cyan) */
+/* 1. SEGUIDOR (Follower - Cyan & Dark Cyberpunk) */
 .alert-box.type-follower {
-  background: rgba(2, 12, 22, 0.22);
+  background: linear-gradient(135deg, #071524 0%, #030b14 100%);
   border-color: #00d2ff;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 30px rgba(0, 210, 255, 0.4);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.88), 0 0 35px rgba(0, 210, 255, 0.45), inset 0 0 25px rgba(0, 210, 255, 0.1);
+}
+.alert-box.type-follower::before {
+  background: linear-gradient(90deg, transparent, #ffffff, #00d2ff, transparent);
 }
 .alert-box.type-follower .alert-type-badge {
   color: #00d2ff;
 }
+.alert-box.type-follower .alert-user-name {
+  text-shadow: 0 0 25px rgba(0, 210, 255, 0.65), 0 2px 10px rgba(0, 0, 0, 0.95);
+}
 .alert-box.type-follower .alert-mascot-img {
   border-color: #00d2ff;
+  background: #040e1a;
   box-shadow: 0 0 20px rgba(0, 210, 255, 0.45);
 }
 .alert-box.type-follower .alert-ring-pulse {
   border-color: #00d2ff;
 }
+.alert-box.type-follower .alert-custom-message {
+  border-left-color: #00d2ff;
+  background: rgba(0, 210, 255, 0.08);
+  color: #c2eeff;
+}
 
-/* 2. SUB / RESUB (Subscriber - Gold & Ruby) */
+/* 2. SUB / RESUB (Subscriber - Gold & Amber Noir) */
 .alert-box.type-sub {
-  background: rgba(22, 14, 2, 0.22);
+  background: linear-gradient(135deg, #1d1403 0%, #0c0801 100%);
   border-color: #ffb800;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 35px rgba(255, 184, 0, 0.4);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.88), 0 0 35px rgba(255, 184, 0, 0.45), inset 0 0 25px rgba(255, 184, 0, 0.1);
+}
+.alert-box.type-sub::before {
+  background: linear-gradient(90deg, transparent, #ffffff, #ffb800, transparent);
 }
 .alert-box.type-sub .alert-type-badge {
   color: #ffb800;
 }
 .alert-box.type-sub .alert-user-name {
-  text-shadow: 0 0 25px rgba(255, 184, 0, 0.6);
+  text-shadow: 0 0 25px rgba(255, 184, 0, 0.65), 0 2px 10px rgba(0, 0, 0, 0.95);
 }
 .alert-box.type-sub .alert-mascot-img {
   border-color: #ffb800;
+  background: #140e02;
   box-shadow: 0 0 20px rgba(255, 184, 0, 0.45);
 }
 .alert-box.type-sub .alert-ring-pulse {
   border-color: #ffb800;
 }
+.alert-box.type-sub .alert-custom-message {
+  border-left-color: #ffb800;
+  background: rgba(255, 184, 0, 0.08);
+  color: #ffe6a6;
+}
 
-/* 3. DOAÇÃO / PIX (Donation - Emerald & Neon Green) */
+/* 3. DOAÇÃO / PIX (Donation - Emerald & Neon Green Noir) */
 .alert-box.type-donation {
-  background: rgba(2, 22, 10, 0.22);
+  background: linear-gradient(135deg, #031c0e 0%, #010d06 100%);
   border-color: #00ff7f;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 35px rgba(0, 255, 127, 0.4);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.88), 0 0 35px rgba(0, 255, 127, 0.45), inset 0 0 25px rgba(0, 255, 127, 0.1);
+}
+.alert-box.type-donation::before {
+  background: linear-gradient(90deg, transparent, #ffffff, #00ff7f, transparent);
 }
 .alert-box.type-donation .alert-type-badge {
   color: #00ff7f;
 }
 .alert-box.type-donation .alert-user-name {
   color: #ffffff;
-  text-shadow: 0 0 25px rgba(0, 255, 127, 0.6);
+  text-shadow: 0 0 25px rgba(0, 255, 127, 0.65), 0 2px 10px rgba(0, 0, 0, 0.95);
 }
 .alert-box.type-donation .alert-mascot-img {
   border-color: #00ff7f;
+  background: #02140a;
   box-shadow: 0 0 20px rgba(0, 255, 127, 0.45);
 }
 .alert-box.type-donation .alert-ring-pulse {
   border-color: #00ff7f;
 }
+.alert-box.type-donation .alert-custom-message {
+  border-left-color: #00ff7f;
+  background: rgba(0, 255, 127, 0.08);
+  color: #baffd8;
+}
 
-/* 4. CHEER / BITS (Bits - Magenta / Purple Spark) */
+/* 4. CHEER / BITS (Bits - Magenta & Amethyst Noir) */
 .alert-box.type-bits {
-  background: rgba(22, 2, 20, 0.22);
+  background: linear-gradient(135deg, #1c031a 0%, #0b010a 100%);
   border-color: #ff00ea;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 35px rgba(255, 0, 234, 0.4);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.88), 0 0 35px rgba(255, 0, 234, 0.45), inset 0 0 25px rgba(255, 0, 234, 0.1);
+}
+.alert-box.type-bits::before {
+  background: linear-gradient(90deg, transparent, #ffffff, #ff00ea, transparent);
 }
 .alert-box.type-bits .alert-type-badge {
   color: #ff00ea;
 }
+.alert-box.type-bits .alert-user-name {
+  text-shadow: 0 0 25px rgba(255, 0, 234, 0.65), 0 2px 10px rgba(0, 0, 0, 0.95);
+}
 .alert-box.type-bits .alert-mascot-img {
   border-color: #ff00ea;
+  background: #140213;
   box-shadow: 0 0 20px rgba(255, 0, 234, 0.45);
 }
 .alert-box.type-bits .alert-ring-pulse {
   border-color: #ff00ea;
 }
+.alert-box.type-bits .alert-custom-message {
+  border-left-color: #ff00ea;
+  background: rgba(255, 0, 234, 0.08);
+  color: #ffb8f7;
+}
 
-/* 5. RAID / HOST (Raid - Fiery Alert Crimson) */
+/* 5. RAID / HOST (Raid - Fiery Crimson Noir) */
 .alert-box.type-raid {
-  background: rgba(25, 3, 6, 0.26);
+  background: linear-gradient(135deg, #220308 0%, #0d0103 100%);
   border-color: #ff2a40;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 40px rgba(255, 42, 64, 0.5);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.88), 0 0 40px rgba(255, 42, 64, 0.55), inset 0 0 25px rgba(255, 42, 64, 0.12);
   animation: raidHazardPulse 1s infinite alternate;
+}
+.alert-box.type-raid::before {
+  background: linear-gradient(90deg, transparent, #ffffff, #ff2a40, transparent);
 }
 .alert-box.type-raid .alert-type-badge {
   color: #ff3344;
 }
+.alert-box.type-raid .alert-user-name {
+  text-shadow: 0 0 25px rgba(255, 42, 64, 0.65), 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+.alert-box.type-raid .alert-mascot-img {
+  border-color: #ff2a40;
+  background: #160205;
+  box-shadow: 0 0 20px rgba(255, 42, 64, 0.45);
+}
+.alert-box.type-raid .alert-ring-pulse {
+  border-color: #ff2a40;
+}
+.alert-box.type-raid .alert-custom-message {
+  border-left-color: #ff2a40;
+  background: rgba(255, 42, 64, 0.08);
+  color: #ffbcc3;
+}
 
 @keyframes raidHazardPulse {
-  0% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 20px rgba(255, 42, 64, 0.35); }
-  100% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 45px rgba(255, 42, 64, 0.75); }
+  0% { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.88), 0 0 25px rgba(255, 42, 64, 0.4); }
+  100% { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.88), 0 0 45px rgba(255, 42, 64, 0.8); }
 }

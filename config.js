@@ -15,14 +15,13 @@ const baseConfig = {
   socialYoutube: "/DEC4LAND",
 
   // Twitch EventSub WebSocket (Alertas de Follow, Sub, Bits, Raid em tempo real)
-  twitchClientId: "",       // Ex: "gp762nuuoqcoxypju8c569th9wz7q5"
-  twitchOAuthToken: "",     // Deixe vazio no repositório. Preencha em config.local.js ou no index.html
+  twitchClientId: "gp762nuuoqcoxypju8c569th9wz7q5",
+  twitchOAuthToken: "0g0nd4evyicjelefrfe222rf11bd3e",
 
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
-  // Opcional: Se preenchido, será exibido caso não haja evento recente na Twitch
-  latestFollower: "",       // Ex: "Marcel_Gamer"
-  latestDonate: "",         // Ex: "Marcel (R$ 50,00)"
-  latestSub: ""             // Ex: "Marcel (Tier 1)"
+  latestFollower: "dozada034",
+  latestDonate: "-",
+  latestSub: "amahzy (Gift)"
 };
 
 window.DEC4LAND_CONFIG = Object.assign({}, baseConfig, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
@@ -36,6 +35,7 @@ window.DEC4LAND_CONFIG = Object.assign({}, baseConfig, window.DEC4LAND_CONFIG ||
     s.onload = function() {
       if (window.DEC4LAND_LOCAL_CONFIG) {
         window.DEC4LAND_CONFIG = Object.assign({}, window.DEC4LAND_CONFIG, window.DEC4LAND_LOCAL_CONFIG);
+        window.dispatchEvent(new CustomEvent('dec4land_config_updated'));
       }
     };
     s.onerror = function() {

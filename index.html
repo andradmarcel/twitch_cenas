@@ -746,7 +746,10 @@
             <span>★</span> Testar Seguidor
           </button>
           <button class="alert-btn btn-sub" onclick="triggerTestAlert('sub')">
-            <span>💎</span> Testar Sub (Tier 1)
+            <span>💎</span> Testar Sub
+          </button>
+          <button class="alert-btn btn-sub" style="border-color: #ffd700;" onclick="triggerTestAlert('subgift')">
+            <span>🎁</span> Testar Sub Gift
           </button>
           <button class="alert-btn btn-donation" onclick="triggerTestAlert('donation')">
             <span>💵</span> Testar Doação / Pix
@@ -925,12 +928,18 @@
       const amount = document.getElementById('alert-test-amount').value.trim() || '';
       const message = document.getElementById('alert-test-msg').value.trim() || '';
 
+      const isGift = (type === 'subgift');
+      const actualType = isGift ? 'sub' : type;
+
       const payload = {
         id: 'test_' + type + '_' + Date.now(),
-        type: type,
+        type: actualType,
         user: user,
         amount: amount,
-        message: message
+        message: message,
+        isGift: isGift,
+        recipient: isGift ? 'Amigo_Deca' : null,
+        detail: isGift ? 'presenteou um Sub para Amigo_Deca!' : ''
       };
 
       // Send via BroadcastChannel (preferred for multi-window / OBS synchronization)
@@ -967,9 +976,13 @@
       const sF = localStorage.getItem('dec4land_real_follower');
       const sD = localStorage.getItem('dec4land_real_donate');
       const sS = localStorage.getItem('dec4land_real_sub');
-      if (sF) gameplayUrl += '&follow=' + encodeURIComponent(sF);
-      if (sD) gameplayUrl += '&donate=' + encodeURIComponent(sD);
-      if (sS) gameplayUrl += '&sub=' + encodeURIComponent(sS);
+      const cleanF = (sF && !sF.toLowerCase().includes('marcel_gamer')) ? sF : null;
+      const cleanD = (sD && !sD.toLowerCase().includes('marcel') && !sD.includes('50,00')) ? sD : null;
+      const cleanS = (sS && !sS.toLowerCase().includes('marcel_gamer')) ? sS : null;
+
+      if (cleanF) gameplayUrl += '&follow=' + encodeURIComponent(cleanF);
+      if (cleanD) gameplayUrl += '&donate=' + encodeURIComponent(cleanD);
+      if (cleanS) gameplayUrl += '&sub=' + encodeURIComponent(cleanS);
       document.getElementById('url-gameplay').textContent = gameplayUrl;
       const brbEl = document.getElementById('url-brb');
       if (brbEl) brbEl.textContent = base + 'brb.html';
@@ -977,17 +990,17 @@
       const conversaEl = document.getElementById('url-conversa');
       if (conversaEl) {
         let conversaUrl = base + 'conversa.html?channel=' + encodeURIComponent(currentChannel);
-        if (sF) conversaUrl += '&follow=' + encodeURIComponent(sF);
-        if (sD) conversaUrl += '&donate=' + encodeURIComponent(sD);
-        if (sS) conversaUrl += '&sub=' + encodeURIComponent(sS);
+        if (cleanF) conversaUrl += '&follow=' + encodeURIComponent(cleanF);
+        if (cleanD) conversaUrl += '&donate=' + encodeURIComponent(cleanD);
+        if (cleanS) conversaUrl += '&sub=' + encodeURIComponent(cleanS);
         conversaEl.textContent = conversaUrl;
       }
       const reactEl = document.getElementById('url-react');
       if (reactEl) {
         let reactUrl = base + 'react.html?channel=' + encodeURIComponent(currentChannel);
-        if (sF) reactUrl += '&follow=' + encodeURIComponent(sF);
-        if (sD) reactUrl += '&donate=' + encodeURIComponent(sD);
-        if (sS) reactUrl += '&sub=' + encodeURIComponent(sS);
+        if (cleanF) reactUrl += '&follow=' + encodeURIComponent(cleanF);
+        if (cleanD) reactUrl += '&donate=' + encodeURIComponent(cleanD);
+        if (cleanS) reactUrl += '&sub=' + encodeURIComponent(cleanS);
         reactEl.textContent = reactUrl;
       }
       const alertsEl = document.getElementById('url-alerts');
@@ -1075,9 +1088,14 @@
       const savedFollow = localStorage.getItem('dec4land_real_follower');
       const savedDon = localStorage.getItem('dec4land_real_donate');
       const savedSb = localStorage.getItem('dec4land_real_sub');
-      if (savedFollow) document.getElementById('hud-real-follower').value = savedFollow;
-      if (savedDon) document.getElementById('hud-real-donate').value = savedDon;
-      if (savedSb) document.getElementById('hud-real-sub').value = savedSb;
+      if (savedFollow && !savedFollow.toLowerCase().includes('marcel_gamer')) document.getElementById('hud-real-follower').value = savedFollow;
+      if (savedDon && !savedDon.toLowerCase().includes('marcel') && !savedDon.includes('50,00')) {
+        document.getElementById('hud-real-donate').value = savedDon;
+      } else {
+        try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
+        document.getElementById('hud-real-donate').value = '';
+      }
+      if (savedSb && !savedSb.toLowerCase().includes('marcel_gamer')) document.getElementById('hud-real-sub').value = savedSb;
 
       // Carregar credenciais EventSub salvas
       const savedClientId = localStorage.getItem('dec4land_eventsub_client_id') || (window.DEC4LAND_CONFIG?.twitchClientId || '');
@@ -1118,10 +1136,13 @@
       const sF = localStorage.getItem('dec4land_real_follower');
       const sD = localStorage.getItem('dec4land_real_donate');
       const sS = localStorage.getItem('dec4land_real_sub');
+      const cleanF = (sF && !sF.toLowerCase().includes('marcel_gamer')) ? sF : null;
+      const cleanD = (sD && !sD.toLowerCase().includes('marcel') && !sD.includes('50,00')) ? sD : null;
+      const cleanS = (sS && !sS.toLowerCase().includes('marcel_gamer')) ? sS : null;
       let hudParams = '?channel=' + encodeURIComponent(currentChannel);
-      if (sF) hudParams += '&follow=' + encodeURIComponent(sF);
-      if (sD) hudParams += '&donate=' + encodeURIComponent(sD);
-      if (sS) hudParams += '&sub=' + encodeURIComponent(sS);
+      if (cleanF) hudParams += '&follow=' + encodeURIComponent(cleanF);
+      if (cleanD) hudParams += '&donate=' + encodeURIComponent(cleanD);
+      if (cleanS) hudParams += '&sub=' + encodeURIComponent(cleanS);
 
       if (sceneName === 'starting') {
         const btn = document.querySelector('.tab-btn:nth-child(1)');
@@ -1270,6 +1291,7 @@
       }
     }
   </script>
+  <script src="config.local.js"></script>
   <script src="config.js"></script>
   <script src="js/alerts.js"></script>
   <script src="js/eventsub.js"></script>

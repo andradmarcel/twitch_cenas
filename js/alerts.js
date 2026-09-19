@@ -19,9 +19,14 @@
       } else {
         this.muted = !isMasterAudioScene;
       }
+
+      // Volume Master (padrão 85%, configurável via ?vol=100 ou config.js)
+      const cfg = window.DEC4LAND_CONFIG || {};
+      const customVol = urlParams.get('vol') || urlParams.get('volume') || cfg.alertVolume;
+      this.masterVolume = customVol !== null && customVol !== undefined ? Math.max(0, Math.min(1.0, parseFloat(customVol) > 1 ? parseFloat(customVol) / 100 : parseFloat(customVol))) : 0.85;
     }
 
-    init() {
+    async init() {
       if (!this.ctx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (AudioContext) {
@@ -29,76 +34,83 @@
         }
       }
       if (this.ctx && this.ctx.state === 'suspended') {
-        this.ctx.resume();
+        try {
+          await this.ctx.resume();
+        } catch (e) {
+          console.warn('[Alerts] AudioContext resume:', e);
+        }
       }
     }
 
-    playTone(freq, type, duration, startTime = 0, gainLevel = 0.25) {
+    playTone(freq, type, duration, startTime = 0, gainLevel = 0.5) {
       if (this.muted || !this.ctx) return;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
-      osc.type = type; // 'sine', 'triangle', 'square', 'sawtooth'
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
+      const effectiveGain = Math.max(0.01, gainLevel * this.masterVolume);
+      const startAt = Math.max(this.ctx.currentTime, this.ctx.currentTime + startTime);
 
-      gain.gain.setValueAtTime(gainLevel, this.ctx.currentTime + startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
+      osc.type = type; // 'sine', 'triangle', 'square', 'sawtooth'
+      osc.frequency.setValueAtTime(freq, startAt);
+
+      gain.gain.setValueAtTime(effectiveGain, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
-      osc.start(this.ctx.currentTime + startTime);
-      osc.stop(this.ctx.currentTime + startTime + duration);
+      osc.start(startAt);
+      osc.stop(startAt + duration);
     }
 
-    playSound(alertType) {
-      this.init();
+    async playSound(alertType) {
+      await this.init();
       if (this.muted || !this.ctx) return;
 
       switch (alertType) {
         case 'follower':
-          // Futuristic 2-tone chime
-          this.playTone(523.25, 'sine', 0.25, 0.0, 0.25); // C5
-          this.playTone(783.99, 'sine', 0.45, 0.12, 0.3); // G5
-          this.playTone(1046.50, 'triangle', 0.6, 0.25, 0.35); // C6
+          // Futuristic 3-tone high chime (agora audível e vibrante)
+          this.playTone(587.33, 'sine', 0.22, 0.0, 0.55); // D5
+          this.playTone(880.00, 'sine', 0.35, 0.10, 0.65); // A5
+          this.playTone(1174.66, 'triangle', 0.55, 0.22, 0.75); // D6
           break;
 
         case 'sub':
-          // Triumphant 4-note victory chord
-          this.playTone(440.0, 'sawtooth', 0.2, 0.0, 0.18);  // A4
-          this.playTone(554.37, 'sawtooth', 0.25, 0.1, 0.2); // C#5
-          this.playTone(659.25, 'sawtooth', 0.3, 0.2, 0.22); // E5
-          this.playTone(880.0, 'triangle', 0.7, 0.3, 0.35);  // A5
-          this.playTone(1108.73, 'sine', 0.9, 0.35, 0.4);    // C#6
+          // Triumphant victory fanfare (5 notas potentes)
+          this.playTone(440.00, 'sawtooth', 0.18, 0.0, 0.45);  // A4
+          this.playTone(554.37, 'sawtooth', 0.22, 0.09, 0.50); // C#5
+          this.playTone(659.25, 'sawtooth', 0.28, 0.18, 0.55); // E5
+          this.playTone(880.00, 'triangle', 0.55, 0.28, 0.70); // A5
+          this.playTone(1108.73, 'sine', 0.75, 0.34, 0.80);    // C#6
           break;
 
         case 'donation':
-          // Cash register / coin drop + sub bass
-          this.playTone(1318.51, 'sine', 0.3, 0.0, 0.35); // E6
-          this.playTone(1760.00, 'sine', 0.4, 0.08, 0.4); // A6
-          this.playTone(2637.02, 'sine', 0.55, 0.16, 0.45); // E7
-          this.playTone(110.00, 'triangle', 0.5, 0.18, 0.3); // Bass hit
+          // Cash register / coin drop + sub bass punch
+          this.playTone(1318.51, 'sine', 0.25, 0.0, 0.65); // E6
+          this.playTone(1760.00, 'sine', 0.35, 0.08, 0.70); // A6
+          this.playTone(2637.02, 'sine', 0.50, 0.16, 0.80); // E7
+          this.playTone(110.00, 'triangle', 0.45, 0.18, 0.60); // Bass hit
           break;
 
         case 'bits':
           // Rapid digital spark arpeggio
           const notes = [659.25, 880.0, 987.77, 1318.51, 1567.98];
           notes.forEach((f, idx) => {
-            this.playTone(f, 'sine', 0.18, idx * 0.06, 0.25);
+            this.playTone(f, 'sine', 0.20, idx * 0.06, 0.60);
           });
           break;
 
         case 'raid':
           // Dramatic hazard pulse + victory fanfare
-          this.playTone(329.63, 'square', 0.15, 0.0, 0.15);
-          this.playTone(493.88, 'square', 0.2, 0.12, 0.18);
-          this.playTone(329.63, 'square', 0.15, 0.24, 0.15);
-          this.playTone(659.25, 'sawtooth', 0.6, 0.38, 0.3);
-          this.playTone(987.77, 'sine', 0.8, 0.48, 0.4);
+          this.playTone(329.63, 'square', 0.15, 0.0, 0.40);
+          this.playTone(493.88, 'square', 0.2, 0.12, 0.45);
+          this.playTone(329.63, 'square', 0.15, 0.24, 0.40);
+          this.playTone(659.25, 'sawtooth', 0.6, 0.38, 0.65);
+          this.playTone(987.77, 'sine', 0.8, 0.48, 0.75);
           break;
 
         default:
-          this.playTone(880, 'sine', 0.4, 0, 0.3);
+          this.playTone(880, 'sine', 0.4, 0, 0.6);
       }
     }
   }
@@ -127,14 +139,16 @@
       }
       this.container = cont;
 
-      // Unlock AudioContext on any user gesture
+      // Unlock AudioContext on load and on any user gesture
       const unlockAudio = () => {
         this.audio.init();
-        window.removeEventListener('click', unlockAudio);
-        window.removeEventListener('keydown', unlockAudio);
       };
       window.addEventListener('click', unlockAudio);
       window.addEventListener('keydown', unlockAudio);
+      window.addEventListener('pointerdown', unlockAudio);
+      window.addEventListener('focus', unlockAudio);
+      // Tenta desbloquear logo no carregamento
+      setTimeout(() => { this.audio.init(); }, 300);
     }
 
     initBroadcast() {
@@ -207,15 +221,72 @@
     enqueue(alertData) {
       if (!alertData) return;
 
-      // Deduplication check: prevent identical alert firing twice within 5 seconds
-      const alertId = alertData.id || `${alertData.type}_${alertData.user || ''}_${Math.floor(Date.now() / 1500)}`;
-      if (this.recentAlertIds.has(alertId)) {
-        return; // Ignore duplicate
+      const userKey = (alertData.user || '').toLowerCase().trim();
+      let typeKey = (alertData.type || '').toLowerCase().trim();
+      if (typeKey === 'follow') typeKey = 'follower';
+      if (typeKey === 'resub') typeKey = 'sub';
+      if (typeKey === 'pix' || typeKey === 'donate') typeKey = 'donation';
+      if (typeKey === 'cheer') typeKey = 'bits';
+      if (typeKey === 'host') typeKey = 'raid';
+
+      // Chaves de desduplicação robustas (Universal: tipo + usuário, e ID explícito)
+      const userTypeKey = userKey ? `${typeKey}::${userKey}` : null;
+      const explicitId = alertData.id ? String(alertData.id).toLowerCase().trim() : null;
+
+      // 1. Verificação de duplicata por ID explícito ou por Usuário+Tipo nos últimos 15 segundos
+      if (explicitId && this.recentAlertIds.has(explicitId)) {
+        console.log(`[Alerts] Descartando alerta duplicado por ID: ${explicitId}`);
+        return;
       }
-      this.recentAlertIds.add(alertId);
-      setTimeout(() => this.recentAlertIds.delete(alertId), 5000);
+      if (userTypeKey && this.recentAlertIds.has(userTypeKey)) {
+        console.log(`[Alerts] Descartando alerta duplicado por Usuário+Tipo: ${userTypeKey}`);
+        return;
+      }
+
+      // 2. Se for sub de presente (gift), bloqueia alerta falso de novo sub individual para o recebedor
+      const recipientKey = alertData.recipient ? String(alertData.recipient).toLowerCase().trim() : null;
+      if (alertData.isGift && recipientKey) {
+        this.recentAlertIds.add(`sub::${recipientKey}`);
+        setTimeout(() => this.recentAlertIds.delete(`sub::${recipientKey}`), 25000);
+      }
+
+      // Registra chaves no conjunto de supressão temporária (15 segundos)
+      if (explicitId) {
+        this.recentAlertIds.add(explicitId);
+        setTimeout(() => this.recentAlertIds.delete(explicitId), 15000);
+      }
+      if (userTypeKey) {
+        this.recentAlertIds.add(userTypeKey);
+        setTimeout(() => this.recentAlertIds.delete(userTypeKey), 15000);
+      }
 
       this.queue.push(alertData);
+
+      // Sincroniza letreiros nas outras cenas abertas no OBS (apenas se NÃO for teste sintético)
+      const isTestAlert = alertData.isTest || 
+        String(alertData.id || '').startsWith('test_') || 
+        String(alertData.id || '').startsWith('key_test_') || 
+        String(alertData.id || '').startsWith('url_test_') || 
+        (alertData.user || '').toLowerCase() === 'marcel_gamer';
+
+      if (!isTestAlert) {
+        try {
+          const type = (alertData.type || '').toLowerCase();
+          if ((type === 'follower' || type === 'follow') && alertData.user) {
+            localStorage.setItem('dec4land_real_follower', alertData.user);
+            if (this.broadcastChannel) this.broadcastChannel.postMessage({ action: 'update_hud_info', follower: alertData.user });
+          } else if ((type === 'sub' || type === 'resub') && alertData.user) {
+            const subText = alertData.isGift ? `${alertData.user} (Gift)` : alertData.user;
+            localStorage.setItem('dec4land_real_sub', subText);
+            if (this.broadcastChannel) this.broadcastChannel.postMessage({ action: 'update_hud_info', sub: subText });
+          } else if ((type === 'donation' || type === 'donate' || type === 'pix') && alertData.user) {
+            const amt = alertData.amount ? `${alertData.user} (${alertData.amount})` : alertData.user;
+            localStorage.setItem('dec4land_real_donate', amt);
+            if (this.broadcastChannel) this.broadcastChannel.postMessage({ action: 'update_hud_info', donate: amt });
+          }
+        } catch(e) {}
+      }
+
       this.processQueue();
     }
 
@@ -261,8 +332,8 @@
         let typeClass = 'type-follower';
 
         if (type === 'sub' || type === 'resub') {
-          badgeText = '💎 NOVO SUB';
-          defaultDetail = rawDetail ? this.escapeHtml(rawDetail) : 'acabou de se inscrever no canal!';
+          badgeText = alertData.isGift ? '🎁 PRESENTE DE SUB' : '💎 NOVO SUB';
+          defaultDetail = alertData.isGift ? 'presenteou um Sub!' : (rawDetail ? this.escapeHtml(rawDetail) : 'acabou de se inscrever no canal!');
           typeClass = 'type-sub';
         } else if (type === 'donation' || type === 'pix') {
           badgeText = '💵 NOVA DOAÇÃO // PIX';
@@ -356,9 +427,12 @@
   const manager = new AlertManager();
 
   // Global helper to trigger alert locally or broadcast
-  window.triggerTwitchAlert = function(alertData, broadcast = true) {
+  window.triggerTwitchAlert = function(alertData, broadcast = false) {
     manager.enqueue(alertData);
-    if (broadcast && manager.broadcastChannel) {
+    // alerts.html já é o renderizador de tela final. Não retransmite para evitar loops de eco.
+    const path = (window.location.pathname || '').toLowerCase();
+    const isAlertsPage = path.includes('alerts.html');
+    if (broadcast && !isAlertsPage && manager.broadcastChannel) {
       try {
         manager.broadcastChannel.postMessage({
           action: 'trigger_alert',
@@ -383,16 +457,46 @@
         channel: channel,
         onNotice: (notice) => {
           if (notice.msgId === 'sub' || notice.msgId === 'resub') {
-            window.triggerTwitchAlert({ type: 'sub', user: notice.user, detail: `assinou o canal! (${notice.months} meses)`, message: notice.message });
+            window.triggerTwitchAlert({
+              type: 'sub',
+              user: notice.user,
+              detail: `assinou o canal! (${notice.months} meses)`,
+              message: notice.message
+            });
           } else if (notice.msgId === 'subgift' || notice.msgId === 'anonsubgift') {
-            window.triggerTwitchAlert({ type: 'sub', user: notice.user, detail: `presenteou um Sub para ${notice.recipient}!` });
+            const recipient = notice.recipient && notice.recipient !== 'um espectador' ? notice.recipient : '';
+            window.triggerTwitchAlert({
+              type: 'sub',
+              user: notice.user,
+              recipient: recipient,
+              detail: recipient ? `presenteou um Sub para ${recipient}!` : `presenteou um Sub!`,
+              isGift: true
+            });
+          } else if (notice.msgId === 'submysterygift') {
+            const count = notice.tags?.['msg-param-mass-gift-count'] || 'vários';
+            window.triggerTwitchAlert({
+              type: 'sub',
+              user: notice.user,
+              detail: `presenteou ${count} Subs para a comunidade!`,
+              isGift: true
+            });
           } else if (notice.msgId === 'raid') {
-            window.triggerTwitchAlert({ type: 'raid', user: notice.user, amount: notice.viewers, detail: `chegou com ${notice.viewers} espectadores!` });
+            window.triggerTwitchAlert({
+              type: 'raid',
+              user: notice.user,
+              amount: notice.viewers,
+              detail: `chegou com ${notice.viewers} espectadores!`
+            });
           }
         },
         onMessage: (msg) => {
           if (msg.bits) {
-            window.triggerTwitchAlert({ type: 'bits', user: msg.displayName || msg.username, amount: msg.bits, message: msg.message });
+            window.triggerTwitchAlert({
+              type: 'bits',
+              user: msg.displayName || msg.username,
+              amount: msg.bits,
+              message: msg.message
+            });
           }
         }
       });

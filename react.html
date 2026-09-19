@@ -6,7 +6,7 @@
   <title>DEC4LAND - React & Apresentação (Captura de Janela + Webcam + Chat)</title>
   <link rel="stylesheet" href="css/shared.css">
   <link rel="stylesheet" href="css/react.css">
-  <link rel="stylesheet" href="css/alerts.css">
+  <script src="config.local.js"></script>
   <script src="config.js"></script>
 </head>
 <body class="react-body">
@@ -26,9 +26,6 @@
   </svg>
 
   <div class="scene-container react-scene-container" id="react-scene">
-    <!-- Twitch Alert Popup Layer -->
-    <div class="alert-container"></div>
-
     <!-- Camada de Fundo Cibernético (Mascarada com os 2 furos transparentes) -->
     <div class="react-ambient-layer">
       <div class="react-ambient-gradient"></div>
@@ -244,7 +241,6 @@
 
   <!-- Scene Scripts -->
   <script src="js/particles.js"></script>
-  <script src="js/alerts.js"></script>
   <script src="js/twitch-irc.js"></script>
   <script src="js/react.js"></script>
   <script src="js/eventsub.js"></script>

@@ -36,12 +36,26 @@
   const pillSub = document.getElementById('pill-sub');
 
   // Load real values: Priority 1) URL Params, 2) localStorage, 3) Config file
-  const realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower') || cfg.latestFollower || '';
-  const realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || cfg.latestDonate || '';
-  const realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '';
+  let realFollower = urlParams.get('follow') || localStorage.getItem('dec4land_real_follower') || cfg.latestFollower || '';
+  let realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || cfg.latestDonate || '-';
+  let realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '';
+
+  // Limpa automaticamente qualquer resquício de teste sintético 'Marcel_Gamer' ou 'Marcel (R$ 50,00)'
+  if (realSub && (realSub.toLowerCase().includes('marcel_gamer') || realSub.toLowerCase() === 'marcel')) {
+    realSub = (cfg.latestSub && !cfg.latestSub.toLowerCase().includes('marcel')) ? cfg.latestSub : '';
+    try { localStorage.removeItem('dec4land_real_sub'); } catch(e) {}
+  }
+  if (realDonate && (realDonate.toLowerCase().includes('marcel') || realDonate.includes('50,00'))) {
+    realDonate = (cfg.latestDonate && !cfg.latestDonate.toLowerCase().includes('marcel')) ? cfg.latestDonate : '-';
+    try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
+  }
+  if (realFollower && (realFollower.toLowerCase().includes('marcel_gamer') || realFollower.toLowerCase() === 'marcel')) {
+    realFollower = (cfg.latestFollower && !cfg.latestFollower.toLowerCase().includes('marcel')) ? cfg.latestFollower : '';
+    try { localStorage.removeItem('dec4land_real_follower'); } catch(e) {}
+  }
 
   if (realFollower && followerEl) followerEl.textContent = realFollower;
-  if (realDonate && donateEl) donateEl.textContent = realDonate;
+  if (donateEl) donateEl.textContent = realDonate || '-';
   if (realSub && subEl) subEl.textContent = realSub;
 
   // Helper to animate pill value update
@@ -108,8 +122,16 @@
       window.updateDonate(user, `${data.amount || '100'} bits`);
     }
 
-    // Modo HUD passivo: apenas atualiza os letreiros da moldura.
-    // Alertas visuais e sonoros são executados estritamente na fonte dedicada alerts.html
+    // Na cena de gameplay, os alertas são passivos: apenas atualizam a moldura.
+    // O alerta visual e sonoro é delegado para a fonte dedicada alerts.html via BroadcastChannel
+    if (broadcast && streamAlertBroadcast) {
+      try {
+        streamAlertBroadcast.postMessage({
+          action: 'trigger_alert',
+          payload: data
+        });
+      } catch (e) {}
+    }
   };
 
   // Broadcast channel for sync between index.html, alerts.html, and gameplay.html
@@ -120,7 +142,7 @@
       streamAlertBroadcast.onmessage = function(e) {
         if (!e.data) return;
         if (e.data.action === 'trigger_alert' && e.data.payload) {
-          window.triggerTwitchAlert(e.data.payload);
+          window.triggerTwitchAlert(e.data.payload, false);
         } else if (e.data.action === 'update_hud_info') {
           if (e.data.follower) window.updateFollower(e.data.follower);
           if (e.data.donate) window.updateDonate(e.data.donate);
@@ -144,7 +166,7 @@
   // Also listen to postMessage
   window.addEventListener('message', function(e) {
     if (e.data && e.data.action === 'trigger_alert' && e.data.payload) {
-      window.triggerTwitchAlert(e.data.payload);
+      window.triggerTwitchAlert(e.data.payload, false);
     } else if (e.data && e.data.action === 'update_hud_info') {
       if (e.data.follower) window.updateFollower(e.data.follower);
       if (e.data.donate) window.updateDonate(e.data.donate);
