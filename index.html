@@ -967,6 +967,11 @@
           payload: payload
         }, '*');
       }
+
+      // Also trigger locally on index.html
+      if (typeof window.triggerTwitchAlert === 'function') {
+        window.triggerTwitchAlert(payload);
+      }
     }
 
     function updateCardUrls() {

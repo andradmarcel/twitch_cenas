@@ -240,12 +240,16 @@
       channel: twitchChannel,
       onNotice: (notice) => {
         if (notice.msgId === 'sub' || notice.msgId === 'resub') {
-          window.updateSub(notice.user, notice.months);
+          const monthsNum = parseInt(notice.months, 10) || 1;
+          const detailText = monthsNum > 1
+            ? `renovou a inscrição (${monthsNum} meses)!`
+            : 'acabou de se inscrever no canal!';
+          window.updateSub(notice.user, monthsNum > 1 ? monthsNum : null);
           broadcastAlert({
             type: 'sub',
             user: notice.user,
             months: notice.months,
-            detail: `assinou o canal (${notice.months} meses)!`
+            detail: detailText
           });
         } else if (notice.msgId === 'subgift' || notice.msgId === 'anonsubgift') {
           broadcastAlert({

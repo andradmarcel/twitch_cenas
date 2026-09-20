@@ -225,9 +225,19 @@
       let typeKey = (alertData.type || '').toLowerCase().trim();
       if (typeKey === 'follow') typeKey = 'follower';
       if (typeKey === 'resub') typeKey = 'sub';
+      if (typeKey === 'subgift') {
+        typeKey = 'sub';
+        alertData.isGift = true;
+      }
       if (typeKey === 'pix' || typeKey === 'donate') typeKey = 'donation';
       if (typeKey === 'cheer') typeKey = 'bits';
       if (typeKey === 'host') typeKey = 'raid';
+
+      const isTestAlert = alertData.isTest || 
+        String(alertData.id || '').startsWith('test_') || 
+        String(alertData.id || '').startsWith('key_test_') || 
+        String(alertData.id || '').startsWith('url_test_') || 
+        (alertData.user || '').toLowerCase() === 'marcel_gamer';
 
       // Chaves de desduplicação robustas (Universal: tipo + usuário, e ID explícito)
       const userTypeKey = userKey ? `${typeKey}::${userKey}` : null;
@@ -238,7 +248,7 @@
         console.log(`[Alerts] Descartando alerta duplicado por ID: ${explicitId}`);
         return;
       }
-      if (userTypeKey && this.recentAlertIds.has(userTypeKey)) {
+      if (!isTestAlert && userTypeKey && this.recentAlertIds.has(userTypeKey)) {
         console.log(`[Alerts] Descartando alerta duplicado por Usuário+Tipo: ${userTypeKey}`);
         return;
       }
@@ -255,7 +265,7 @@
         this.recentAlertIds.add(explicitId);
         setTimeout(() => this.recentAlertIds.delete(explicitId), 15000);
       }
-      if (userTypeKey) {
+      if (!isTestAlert && userTypeKey) {
         this.recentAlertIds.add(userTypeKey);
         setTimeout(() => this.recentAlertIds.delete(userTypeKey), 15000);
       }
@@ -263,12 +273,6 @@
       this.queue.push(alertData);
 
       // Sincroniza letreiros nas outras cenas abertas no OBS (apenas se NÃO for teste sintético)
-      const isTestAlert = alertData.isTest || 
-        String(alertData.id || '').startsWith('test_') || 
-        String(alertData.id || '').startsWith('key_test_') || 
-        String(alertData.id || '').startsWith('url_test_') || 
-        (alertData.user || '').toLowerCase() === 'marcel_gamer';
-
       if (!isTestAlert) {
         try {
           const type = (alertData.type || '').toLowerCase();
@@ -332,8 +336,8 @@
         let typeClass = 'type-follower';
 
         if (type === 'sub' || type === 'resub') {
-          badgeText = alertData.isGift ? '🎁 PRESENTE DE SUB' : '💎 NOVO SUB';
-          defaultDetail = alertData.isGift ? 'presenteou um Sub!' : (rawDetail ? this.escapeHtml(rawDetail) : 'acabou de se inscrever no canal!');
+          badgeText = data.isGift ? '🎁 PRESENTE DE SUB' : '💎 NOVO SUB';
+          defaultDetail = data.isGift ? 'presenteou um Sub!' : (rawDetail ? this.escapeHtml(rawDetail) : 'acabou de se inscrever no canal!');
           typeClass = 'type-sub';
         } else if (type === 'donation' || type === 'pix') {
           badgeText = '💵 NOVA DOAÇÃO // PIX';
@@ -449,18 +453,23 @@
     if (window._dec4landTwitchIrcConnected) return;
     window._dec4landTwitchIrcConnected = true;
 
+    const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
     const urlParams = new URLSearchParams(window.location.search);
-    const channel = (urlParams.get('channel') || localStorage.getItem('dec4land_twitch_channel') || 'dec4land').toLowerCase().replace('#', '');
+    const channel = (urlParams.get('channel') || localStorage.getItem('dec4land_twitch_channel') || cfg.twitchChannel || 'dec4land').toLowerCase().replace(/^@|^#/, '').trim();
 
     if (window.TwitchIrcClient) {
       const irc = new window.TwitchIrcClient({
         channel: channel,
         onNotice: (notice) => {
           if (notice.msgId === 'sub' || notice.msgId === 'resub') {
+            const monthsNum = parseInt(notice.months, 10) || 1;
+            const detailText = monthsNum > 1
+              ? `renovou a inscrição (${monthsNum} meses)!`
+              : 'acabou de se inscrever no canal!';
             window.triggerTwitchAlert({
               type: 'sub',
               user: notice.user,
-              detail: `assinou o canal! (${notice.months} meses)`,
+              detail: detailText,
               message: notice.message
             });
           } else if (notice.msgId === 'subgift' || notice.msgId === 'anonsubgift') {
