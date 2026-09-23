@@ -213,10 +213,23 @@ As cenas do DEC4LAND contam com cliente nativo do **Twitch EventSub WebSocket (`
 2. Na barra **TWITCH EVENTSUB WEBSOCKET**, clique no botão **🔑 Abrir Twitch Token Generator** (ou acesse [twitchtokengenerator.com](https://twitchtokengenerator.com/)).
 3. No campo **Filter scopes**, marque:
    - `moderator:read:followers` (para alertas de novos seguidores)
+   - `user:write:chat` (para o bot de boas-vindas no chat)
    - `channel:read:subscriptions` (para alertas de novos subs)
    - `bits:read` (para alertas de bits)
 4. Role a página até o final e clique no botão verde **Generate Token!**, autorize com a sua conta da Twitch.
 5. Copie o **Access Token** e cole no painel [`index.html`](./index.html) (o Client ID padrão `gp762nuuoqcoxypju8c569th9wz7q5` já vem preenchido).
 6. Clique em **⚡ Conectar & Salvar**. O status ficará **🟢 CONECTADO** e todo follow real tocará o alerta instantaneamente na live!
+
+---
+
+## 🤖 Bot de Boas-Vindas Automático no Chat da Twitch
+
+O sistema conta com um bot integrado que envia uma mensagem personalizada no seu chat assim que um novo seguidor segue o canal:
+
+- **100% Nativo:** Roda diretamente pelas páginas e pelo OBS, sem precisar instalar Node.js ou rodar programas adicionais.
+- **Trava Anti-Duplicação Multi-Cenas:** Se você tiver várias cenas abertas simultaneamente no OBS (gameplay, conversa, react, alerts), o sistema sincroniza via `localStorage` e envia a mensagem estritamente **uma única vez** por seguidor.
+- **Customização Total:** Edite a mensagem pronta no painel [`index.html`](./index.html) com tags dinâmicas como `@{user}` e `{streamer}`.
+- **Botão de Teste:** Teste o envio imediato no chat a qualquer momento com feedback em tempo real.
+
 
 

@@ -8,6 +8,9 @@
       this.ws = null;
       this.sessionId = null;
       this.broadcasterId = '227485020'; // ID oficial do canal dec4land
+      this.senderId = null;
+      this.tokenScopes = new Set();
+      this.recentFollowerWelcomeSet = new Set();
       this.status = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error' | 'unconfigured'
       this.statusMessage = '';
       this.reconnectAttempts = 0;
@@ -344,6 +347,7 @@
       const { clientId, token, channel } = this.getCredentials();
 
       try {
+        await this.validateToken(token);
         this.broadcasterId = await this.fetchBroadcasterId(clientId, token, channel);
         console.log(`[EventSub] Canal resolvido: ${channel} (ID: ${this.broadcasterId})`);
       } catch(err) {
@@ -670,6 +674,9 @@
             });
           }
 
+          // Dispara mensagem automática de boas-vindas no chat da Twitch (com trava anti-duplicação OBS)
+          this.sendWelcomeMessage(followerName);
+
           // Atualiza letreiro de último seguidor nas cenas
           if (typeof window.updateFollower === 'function') {
             window.updateFollower(followerName);
@@ -840,11 +847,180 @@
 
       this.connect();
     }
+    // Valida o Token na API de OAuth da Twitch e inspeciona escopos concedidos
+    async validateToken(token) {
+      if (!token) return null;
+      try {
+        const cleanToken = token.replace(/^oauth:/i, '').replace(/^Bearer /i, '').trim();
+        const res = await fetch('https://id.twitch.tv/oauth2/validate', {
+          headers: {
+            'Authorization': `OAuth ${cleanToken}`
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          this.senderId = data.user_id;
+          const scopes = Array.isArray(data.scopes) ? data.scopes : [];
+          this.tokenScopes = new Set(scopes);
+          const hasChatWrite = this.tokenScopes.has('user:write:chat');
+
+          console.log(`[EventSub] Token verificado com sucesso para @${data.login}! Escopo de chat (user:write:chat): ${hasChatWrite ? '✅ ATIVO' : '❌ NÃO ENCONTRADO'}`);
+
+          window.dispatchEvent(new CustomEvent('dec4land_token_validated', {
+            detail: {
+              valid: true,
+              userId: data.user_id,
+              login: data.login,
+              scopes: scopes,
+              hasChatWrite: hasChatWrite,
+              expiresIn: data.expires_in
+            }
+          }));
+          return data;
+        } else {
+          console.warn('[EventSub] Token inválido ou expirado na Twitch (HTTP ' + res.status + ')');
+          window.dispatchEvent(new CustomEvent('dec4land_token_validated', {
+            detail: { valid: false, status: res.status }
+          }));
+        }
+      } catch(e) {
+        console.warn('[EventSub] Aviso ao consultar validação de token:', e);
+      }
+      return null;
+    }
+
+    // Envia uma mensagem de texto diretamente no chat da Twitch via API Helix
+    async sendChatMessage(messageText) {
+      const { clientId, token } = this.getCredentials();
+      if (!token) {
+        return { success: false, error: 'Token OAuth da Twitch não configurado.' };
+      }
+
+      if (!this.broadcasterId) {
+        try {
+          const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
+          this.broadcasterId = await this.fetchBroadcasterId(clientId, token, cfg.twitchChannel || 'dec4land');
+        } catch(e) {
+          return { success: false, error: 'Não foi possível resolver o ID do canal: ' + e.message };
+        }
+      }
+
+      if (!this.senderId) {
+        await this.validateToken(token);
+      }
+
+      const url = 'https://api.twitch.tv/helix/chat/messages';
+      const cleanToken = token.replace(/^oauth:/i, '').replace(/^Bearer /i, '').trim();
+      const body = {
+        broadcaster_id: this.broadcasterId,
+        sender_id: this.senderId || this.broadcasterId,
+        message: String(messageText || '').trim()
+      };
+
+      if (!body.message) {
+        return { success: false, error: 'Mensagem vazia.' };
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Client-Id': clientId,
+            'Authorization': `Bearer ${cleanToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+          const firstMsg = json.data && json.data[0];
+          if (firstMsg && firstMsg.is_sent === false) {
+            const dropReason = firstMsg.drop_reason?.message || 'Mensagem descartada pela moderação ou automod da Twitch.';
+            console.warn('[WelcomeBot] Aviso no chat:', dropReason);
+            return { success: false, error: dropReason, data: json };
+          }
+          return { success: true, data: json };
+        } else {
+          let errMsg = json.message || `Erro HTTP ${res.status}`;
+          if (res.status === 401 || res.status === 403) {
+            errMsg += ' (Certifique-se de que o token possui o escopo user:write:chat)';
+          }
+          console.warn('[WelcomeBot] Falha no envio do chat:', errMsg);
+          return { success: false, error: errMsg, status: res.status, data: json };
+        }
+      } catch(err) {
+        console.error('[WelcomeBot] Erro de rede ao enviar mensagem:', err);
+        return { success: false, error: err.message };
+      }
+    }
+
+    // Dispara a mensagem personalizada de boas-vindas com trava de concorrência anti-duplicação OBS
+    async sendWelcomeMessage(followerName, isTest = false) {
+      if (!followerName) return { success: false, error: 'Nome de seguidor inválido' };
+
+      const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
+      const isEnabled = localStorage.getItem('dec4land_welcome_bot_enabled') !== null
+        ? localStorage.getItem('dec4land_welcome_bot_enabled') === 'true'
+        : (cfg.welcomeBotEnabled !== false);
+
+      if (!isEnabled && !isTest) {
+        console.log('[WelcomeBot] Bot de boas-vindas desativado nas preferências.');
+        return { success: false, error: 'Bot desativado nas preferências.' };
+      }
+
+      const lowerFollower = followerName.toLowerCase().trim();
+      const dedupeKey = `dec4land_welcome_sent_${lowerFollower}`;
+      const now = Date.now();
+
+      // Trava atômica multi-cenas (evita duplicação caso múltiplas cenas OBS estejam abertas)
+      if (!isTest) {
+        if (this.recentFollowerWelcomeSet.has(lowerFollower)) {
+          console.log(`[WelcomeBot] Mensagem já disparada nesta instância para @${followerName}.`);
+          return { success: false, error: 'Mensagem já disparada nesta cena.' };
+        }
+
+        const lastSent = parseInt(localStorage.getItem(dedupeKey) || '0', 10);
+        if (now - lastSent < 90000) { // Janela de 90 segundos de proteção
+          console.log(`[WelcomeBot] Mensagem para @${followerName} já enviada recentemente por outra cena do OBS.`);
+          return { success: false, error: 'Mensagem já enviada por outra cena do OBS.' };
+        }
+
+        // Grava a trava imediatamente antes do fetch
+        localStorage.setItem(dedupeKey, now.toString());
+        this.recentFollowerWelcomeSet.add(lowerFollower);
+        setTimeout(() => this.recentFollowerWelcomeSet.delete(lowerFollower), 90000);
+      }
+
+      // Monta template configurado
+      let template = localStorage.getItem('dec4land_welcome_bot_template') || cfg.welcomeBotMessage || 'Seja muito bem-vindo(a) à tropa, @{user}! Valeu pelo follow! 🚀🔥';
+      const streamerName = cfg.streamerName || cfg.twitchChannel || 'DEC4LAND';
+      const finalMessage = template
+        .replace(/\{user\}/gi, followerName)
+        .replace(/\{follower\}/gi, followerName)
+        .replace(/\{streamer\}/gi, streamerName)
+        .replace(/\{canal\}/gi, streamerName)
+        .replace(/\{channel\}/gi, streamerName);
+
+      console.log(`[WelcomeBot] 🤖 Disparando boas-vindas no chat para @${followerName}: "${finalMessage}"`);
+      const res = await this.sendChatMessage(finalMessage);
+
+      if (res.success) {
+        console.log(`[WelcomeBot] ✅ Boas-vindas enviadas com sucesso no chat para @${followerName}!`);
+        window.dispatchEvent(new CustomEvent('dec4land_welcome_message_sent', {
+          detail: { user: followerName, message: finalMessage }
+        }));
+      }
+      return res;
+    }
   }
 
   // Instância singleton acessível globalmente
   const client = new TwitchEventSubClient();
   window.dec4landEventSub = client;
+  window.sendTwitchChatMessage = (msg) => client.sendChatMessage(msg);
+  window.testWelcomeChatMessage = (user = 'Marcel_Gamer') => client.sendWelcomeMessage(user, true);
 
   // Inicializa automaticamente após carregamento da página
   if (document.readyState === 'loading') {

@@ -21,7 +21,11 @@ const baseConfig = {
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
   latestFollower: "dozada034",
   latestDonate: "-",
-  latestSub: "amahzy (Gift)"
+  latestSub: "amahzy (Gift)",
+
+  // Bot de Boas-Vindas no Chat da Twitch
+  welcomeBotEnabled: true,
+  welcomeBotMessage: "Seja muito bem-vindo(a) à tropa, @{user}! Valeu pelo follow! 🚀🔥"
 };
 
 window.DEC4LAND_CONFIG = Object.assign({}, baseConfig, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});

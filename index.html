@@ -679,9 +679,60 @@
           <b style="color: #fff;">📌 Como gerar seu Token em 3 passos no Twitch Token Generator:</b>
           <ol style="margin: 6px 0 0 18px; padding: 0;">
             <li>Clique em <b>Abrir Twitch Token Generator</b> acima (o Client ID padrão <code>gp762nuuoqcoxypju8c569th9wz7q5</code> já vem configurado).</li>
-            <li>No campo de busca <i>Filter scopes</i>, procure e marque: <code>moderator:read:followers</code> (seguidores) e opcionalmente <code>channel:read:subscriptions</code> (subs) e <code>bits:read</code> (bits).</li>
+            <li>No campo de busca <i>Filter scopes</i>, procure e marque: <code>moderator:read:followers</code> (alertas de seguidores), <code>user:write:chat</code> (bot de boas-vindas no chat) e opcionalmente <code>channel:read:subscriptions</code> (subs) e <code>bits:read</code> (bits).</li>
             <li>Desça até o fim da página, clique no botão verde <b>Generate Token!</b>, autorize com sua Twitch e copie o <b>Access Token</b> para colar aqui!</li>
           </ol>
+        </div>
+
+        <!-- Painel do Bot de Boas-Vindas no Chat da Twitch -->
+        <div style="background: rgba(20, 15, 35, 0.65); border: 1px solid rgba(145, 70, 255, 0.35); border-radius: 8px; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; filter: drop-shadow(0 0 8px #9146FF);">🤖</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <span style="font-weight: 800; font-size: 14px; color: #fff; letter-spacing: 0.5px;">BOT DE BOAS-VINDAS NO CHAT DA TWITCH</span>
+                  <span id="chat-scope-badge" style="font-size: 10.5px; padding: 3px 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); color: #aaa; font-weight: 700; letter-spacing: 0.5px;">VERIFICANDO PERMISSÃO...</span>
+                </div>
+                <span style="font-size: 12px; color: #a59ac2;">Envia automaticamente uma mensagem no seu chat assim que um novo seguidor for detectado em tempo real!</span>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 700; color: #e2d2ff; background: rgba(145, 70, 255, 0.15); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(145, 70, 255, 0.3);">
+                <input type="checkbox" id="welcome-bot-toggle" checked style="width: 17px; height: 17px; accent-color: #9146FF; cursor: pointer;">
+                <span>Ativar Bot no Chat</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 700; color: #bf94ff;">MENSAGEM PRONTA DE BOAS-VINDAS:</span>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 11px; color: #888;">Inserir tag:</span>
+                <button type="button" onclick="insertTagIntoWelcome('{user}')" style="background: rgba(0, 255, 204, 0.12); border: 1px solid rgba(0, 255, 204, 0.3); color: #00ffcc; border-radius: 4px; padding: 3px 9px; font-size: 11.5px; cursor: pointer; font-family: monospace; font-weight: 700;" title="Nome do novo seguidor">@{user}</button>
+                <button type="button" onclick="insertTagIntoWelcome('{streamer}')" style="background: rgba(255, 26, 75, 0.12); border: 1px solid rgba(255, 26, 75, 0.3); color: #ff5577; border-radius: 4px; padding: 3px 9px; font-size: 11.5px; cursor: pointer; font-family: monospace; font-weight: 700;" title="Nome do seu canal">{streamer}</button>
+              </div>
+            </div>
+
+            <textarea id="welcome-bot-message-input" rows="2" style="width: 100%; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(145, 70, 255, 0.4); border-radius: 6px; color: #fff; padding: 10px 14px; font-size: 13.5px; line-height: 1.4; resize: vertical; box-sizing: border-box; font-family: inherit;" placeholder="Ex: Olá @{user}, seja muito bem-vindo(a) à tropa! Valeu pelo follow! 🚀🔥"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div id="welcome-bot-status-feedback" style="font-size: 12px; color: #a59ac2; display: flex; align-items: center; gap: 6px;">
+              <span>ℹ️</span> <span>Trava anti-duplicação ativa para não repetir mensagens entre múltiplas cenas abertas no OBS.</span>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button onclick="saveWelcomeBotSettings()" class="action-btn" style="background: rgba(145, 70, 255, 0.25); border-color: #9146FF; color: #fff; font-weight: 700;">
+                <span>💾</span> Salvar Mensagem
+              </button>
+              <button onclick="testWelcomeBotChatMessage()" class="action-btn" style="background: #9146FF; color: #fff; font-weight: 800; border: none; box-shadow: 0 0 14px rgba(145, 70, 255, 0.4);">
+                <span>💬</span> Testar Envio no Chat
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1118,6 +1169,39 @@
         if (e.detail) updateEventSubUI(e.detail.status, e.detail.message);
       });
 
+      // Carregar configurações do Bot de Boas-Vindas
+      const botToggle = document.getElementById('welcome-bot-toggle');
+      const botInput = document.getElementById('welcome-bot-message-input');
+      const savedBotEnabled = localStorage.getItem('dec4land_welcome_bot_enabled');
+      const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
+      if (botToggle) {
+        botToggle.checked = savedBotEnabled !== null ? (savedBotEnabled === 'true') : (cfg.welcomeBotEnabled !== false);
+        botToggle.addEventListener('change', () => {
+          localStorage.setItem('dec4land_welcome_bot_enabled', botToggle.checked ? 'true' : 'false');
+          showWelcomeFeedback(botToggle.checked ? '✅ Bot de boas-vindas ativado!' : '⏸️ Bot de boas-vindas pausado.');
+        });
+      }
+      if (botInput) {
+        botInput.value = localStorage.getItem('dec4land_welcome_bot_template') || cfg.welcomeBotMessage || 'Seja muito bem-vindo(a) à tropa, @{user}! Valeu pelo follow! 🚀🔥';
+      }
+
+      // Escuta validação do token para atualizar indicador de escopo do chat
+      window.addEventListener('dec4land_token_validated', (e) => {
+        updateChatScopeBadge(e.detail);
+      });
+
+      // Escuta mensagens de boas-vindas enviadas
+      window.addEventListener('dec4land_welcome_message_sent', (e) => {
+        if (e.detail) {
+          showWelcomeFeedback(`Mensagem enviada com sucesso para @${e.detail.user} no chat!`, false);
+        }
+      });
+
+      // Se já houver token salvo, solicita validação de escopos em background
+      if (savedToken && window.dec4landEventSub) {
+        setTimeout(() => window.dec4landEventSub.validateToken(savedToken), 500);
+      }
+
       updateCardUrls();
     });
 
@@ -1293,6 +1377,91 @@
         if (window.dec4landEventSub) {
           window.dec4landEventSub.disconnect();
         }
+      }
+    }
+
+    // Funções do Bot de Boas-Vindas no Chat da Twitch
+    function updateChatScopeBadge(detail) {
+      const badge = document.getElementById('chat-scope-badge');
+      if (!badge) return;
+
+      if (!detail || !detail.valid) {
+        badge.textContent = '⚪ TOKEN NÃO VALIDADO';
+        badge.style.background = 'rgba(255, 255, 255, 0.1)';
+        badge.style.color = '#aaa';
+        return;
+      }
+
+      if (detail.hasChatWrite) {
+        badge.textContent = '🟢 PERMISSÃO DE CHAT ATIVA (user:write:chat)';
+        badge.style.background = 'rgba(0, 255, 127, 0.2)';
+        badge.style.color = '#00ff7f';
+        badge.title = 'Permissão concedida: O bot está apto a enviar mensagens no seu chat!';
+      } else {
+        badge.textContent = '⚠️ FALTA ESCOPO user:write:chat';
+        badge.style.background = 'rgba(255, 184, 0, 0.2)';
+        badge.style.color = '#ffb800';
+        badge.title = 'Para o bot postar no chat, gere um novo token marcando "user:write:chat".';
+      }
+    }
+
+    function insertTagIntoWelcome(tag) {
+      const input = document.getElementById('welcome-bot-message-input');
+      if (!input) return;
+
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const text = input.value;
+      if (start !== undefined && end !== undefined) {
+        input.value = text.substring(0, start) + tag + text.substring(end);
+        input.focus();
+        input.selectionStart = input.selectionEnd = start + tag.length;
+      } else {
+        input.value += tag;
+        input.focus();
+      }
+    }
+
+    function showWelcomeFeedback(text, isError = false) {
+      const fb = document.getElementById('welcome-bot-status-feedback');
+      if (!fb) return;
+      fb.innerHTML = `<span>${isError ? '❌' : 'ℹ️'}</span> <span style="color: ${isError ? '#ff5577' : '#00ffcc'}; font-weight: 600;">${text}</span>`;
+      setTimeout(() => {
+        fb.innerHTML = `<span>ℹ️</span> <span>Trava anti-duplicação ativa para não repetir mensagens entre múltiplas cenas abertas no OBS.</span>`;
+      }, 6000);
+    }
+
+    function saveWelcomeBotSettings() {
+      const toggle = document.getElementById('welcome-bot-toggle');
+      const input = document.getElementById('welcome-bot-message-input');
+      const isEnabled = toggle ? toggle.checked : true;
+      const message = input ? input.value.trim() : '';
+
+      localStorage.setItem('dec4land_welcome_bot_enabled', isEnabled ? 'true' : 'false');
+      if (message) {
+        localStorage.setItem('dec4land_welcome_bot_template', message);
+      }
+      showWelcomeFeedback('Configurações do bot de boas-vindas salvas com sucesso!');
+    }
+
+    async function testWelcomeBotChatMessage() {
+      const input = document.getElementById('welcome-bot-message-input');
+      const testUser = 'Marcel_Gamer';
+
+      if (!window.dec4landEventSub) {
+        alert('Módulo EventSub não encontrado.');
+        return;
+      }
+
+      showWelcomeFeedback('Enviando mensagem de teste no chat da Twitch...', false);
+
+      const res = await window.dec4landEventSub.sendWelcomeMessage(testUser, true);
+      if (res && res.success) {
+        showWelcomeFeedback(`Mensagem de teste enviada com sucesso no chat! (@${testUser})`, false);
+      } else {
+        const err = res?.error || 'Erro desconhecido';
+        showWelcomeFeedback(`Falha ao enviar no chat: ${err}`, true);
+        alert(`Não foi possível enviar a mensagem no chat da Twitch:\n\n${err}\n\nLembre-se: O token precisa ter o escopo "user:write:chat" selecionado no gerador de token!`);
       }
     }
   </script>
