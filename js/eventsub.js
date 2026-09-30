@@ -484,6 +484,9 @@
                     detail: 'começou a seguir o canal!'
                   });
                 }
+
+                // Dispara mensagem automática de boas-vindas no chat da Twitch (com trava anti-duplicação)
+                this.sendWelcomeMessage(followerName);
               }
 
               this.lastKnownFollower = followerName;
