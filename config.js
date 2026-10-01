@@ -16,10 +16,10 @@ const baseConfig = {
 
   // Twitch EventSub WebSocket (Alertas de Follow, Sub, Bits, Raid em tempo real)
   twitchClientId: "gp762nuuoqcoxypju8c569th9wz7q5",
-  twitchOAuthToken: "0g0nd4evyicjelefrfe222rf11bd3e",
+  twitchOAuthToken: "7iy78ciiw8r4x98eq4029p24qcpchw",
 
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
-  latestFollower: "dozada034",
+  latestFollower: "O_AmanteBR",
   latestDonate: "-",
   latestSub: "amahzy (Gift)",
 

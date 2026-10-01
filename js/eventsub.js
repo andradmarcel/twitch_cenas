@@ -11,6 +11,7 @@
       this.senderId = null;
       this.tokenScopes = new Set();
       this.recentFollowerWelcomeSet = new Set();
+      this.knownFollowersSet = new Set();
       this.status = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error' | 'unconfigured'
       this.statusMessage = '';
       this.reconnectAttempts = 0;
@@ -461,7 +462,7 @@
 
     async syncFollowerWatchdog(clientId, token) {
       try {
-        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.broadcasterId}&first=1`;
+        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.broadcasterId}&first=10`;
         const res = await fetch(url, {
           headers: {
             'Client-Id': clientId,
@@ -471,36 +472,57 @@
         if (res.ok) {
           const json = await res.json();
           if (json.data && json.data.length > 0) {
-            const followerName = json.data[0].user_name || json.data[0].user_login;
-            if (followerName) {
-              // Se é diferente do seguidor anterior que já tínhamos visto, dispara alerta e atualiza
-              if (this.lastKnownFollower && this.lastKnownFollower.toLowerCase() !== followerName.toLowerCase()) {
-                console.log(`[EventSub] ★ NOVO SEGUIDOR IDENTIFICADO VIA API: ${followerName} (anterior: ${this.lastKnownFollower})`);
-                if (window.triggerTwitchAlert) {
-                  window.triggerTwitchAlert({
-                    id: `follow_${followerName.toLowerCase()}`,
-                    type: 'follower',
-                    user: followerName,
-                    detail: 'começou a seguir o canal!'
-                  });
-                }
+            // Se o set ainda não foi populado no startup, inicializa com a lista atual sem disparar spam retroativo
+            if (this.knownFollowersSet.size === 0) {
+              json.data.forEach(f => {
+                const name = (f.user_name || f.user_login || '').toLowerCase();
+                if (name) this.knownFollowersSet.add(name);
+              });
+              const followerName = json.data[0].user_name || json.data[0].user_login;
+              if (followerName) this.lastKnownFollower = followerName;
+              return;
+            }
 
-                // Dispara mensagem automática de boas-vindas no chat da Twitch (com trava anti-duplicação)
-                this.sendWelcomeMessage(followerName);
+            // Identifica novos seguidores (do mais antigo para o mais recente na lista)
+            const newFollowers = [];
+            for (let i = json.data.length - 1; i >= 0; i--) {
+              const item = json.data[i];
+              const name = item.user_name || item.user_login;
+              const lower = (name || '').toLowerCase();
+              if (lower && !this.knownFollowersSet.has(lower)) {
+                newFollowers.push(name);
+                this.knownFollowersSet.add(lower);
               }
+            }
 
-              this.lastKnownFollower = followerName;
+            // Dispara alerta visual e mensagem de boas-vindas no chat para cada novo seguidor detectado
+            for (const followerName of newFollowers) {
+              console.log(`[EventSub] ★ NOVO SEGUIDOR IDENTIFICADO VIA WATCHDOG: ${followerName}`);
+              if (window.triggerTwitchAlert) {
+                window.triggerTwitchAlert({
+                  id: `follow_${followerName.toLowerCase()}_${Date.now()}`,
+                  type: 'follower',
+                  user: followerName,
+                  detail: 'começou a seguir o canal!'
+                });
+              }
+              this.sendWelcomeMessage(followerName);
+            }
 
+            // Atualiza letreiro e HUD com o seguidor mais recente
+            const latestName = json.data[0].user_name || json.data[0].user_login;
+            if (latestName) {
+              this.lastKnownFollower = latestName;
               const currentSaved = localStorage.getItem('dec4land_real_follower') || window.DEC4LAND_CONFIG?.latestFollower || '';
-              if (!currentSaved || currentSaved.toLowerCase() !== followerName.toLowerCase()) {
+              if (!currentSaved || currentSaved.toLowerCase() !== latestName.toLowerCase()) {
                 if (typeof window.updateFollower === 'function') {
-                  window.updateFollower(followerName);
+                  window.updateFollower(latestName);
                 }
                 try {
-                  localStorage.setItem('dec4land_real_follower', followerName);
+                  localStorage.setItem('dec4land_real_follower', latestName);
                   if ('BroadcastChannel' in window) {
                     const bc = new BroadcastChannel('dec4land_stream_alerts');
-                    bc.postMessage({ action: 'update_hud_info', follower: followerName });
+                    bc.postMessage({ action: 'update_hud_info', follower: latestName });
                   }
                 } catch(e) {}
               }
@@ -614,7 +636,7 @@
     async fetchLatestFollower(clientId, token) {
       if (!this.broadcasterId || !token || !clientId) return null;
       try {
-        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.broadcasterId}&first=1`;
+        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.broadcasterId}&first=10`;
         const res = await fetch(url, {
           headers: {
             'Client-Id': clientId,
@@ -624,12 +646,16 @@
         if (res.ok) {
           const json = await res.json();
           if (json.data && json.data.length > 0) {
+            // Popula os seguidores já conhecidos para não disparar retrospectivo
+            json.data.forEach(f => {
+              const name = (f.user_name || f.user_login || '').toLowerCase();
+              if (name) this.knownFollowersSet.add(name);
+            });
+
             const followerName = json.data[0].user_name || json.data[0].user_login;
             if (followerName) {
               console.log(`[EventSub] ★ Último seguidor carregado da Twitch: ${followerName}`);
-              if (!this.lastKnownFollower) {
-                this.lastKnownFollower = followerName;
-              }
+              this.lastKnownFollower = followerName;
               if (typeof window.updateFollower === 'function') {
                 window.updateFollower(followerName);
               }
@@ -665,6 +691,7 @@
           const followerName = event.user_name || event.user_login || 'Novo Seguidor';
           console.log(`[EventSub] ★ NOVO SEGUIDOR REAL: ${followerName}`);
 
+          this.knownFollowersSet.add(followerName.toLowerCase());
           this.lastKnownFollower = followerName;
 
           // Dispara alerta visual e sonoro DEC4LAND
