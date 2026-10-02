@@ -105,8 +105,74 @@
               this.connect();
             }
           };
+
+          // Canal dedicado para sincronizar e travar o envio de boas-vindas entre todas as abas e cenas
+          this.welcomeBc = new BroadcastChannel('dec4land_welcome_bot');
+          this.welcomeBc.onmessage = (e) => {
+            if (e.data && e.data.action === 'claim_welcome' && e.data.user) {
+              const u = String(e.data.user).toLowerCase().trim();
+              this.recentFollowerWelcomeSet.add(u);
+              try {
+                localStorage.setItem(`dec4land_welcome_sent_${u}`, (e.data.timestamp || Date.now()).toString());
+              } catch(err) {}
+            }
+          };
         }
       } catch(e) {}
+
+      // Sincroniza via storage event quando outra aba grava no localStorage
+      try {
+        window.addEventListener('storage', (e) => {
+          if (e.key && e.key.startsWith('dec4land_welcome_sent_')) {
+            const u = e.key.replace('dec4land_welcome_sent_', '').toLowerCase().trim();
+            if (u) this.recentFollowerWelcomeSet.add(u);
+          }
+        });
+      } catch(e) {}
+
+      // Escuta mensagens capturadas do chat via Twitch IRC para detectar se o bot já postou no chat
+      try {
+        window.addEventListener('dec4land_twitch_irc_message', (e) => {
+          const d = e.detail;
+          if (!d || !d.message) return;
+          const channelName = (this.getCredentials().channel || 'dec4land').toLowerCase();
+          const isBroadcaster = d.highlight === 'broadcaster' ||
+            (d.username && d.username.toLowerCase() === channelName) ||
+            (d.badges && d.badges.some(b => b.startsWith('broadcaster')));
+
+          if (isBroadcaster) {
+            const mentions = d.message.match(/@([a-zA-Z0-9_]{3,25})/g);
+            if (mentions) {
+              const now = Date.now();
+              mentions.forEach(m => {
+                const u = m.substring(1).toLowerCase();
+                this.recentFollowerWelcomeSet.add(u);
+                try {
+                  localStorage.setItem(`dec4land_welcome_sent_${u}`, now.toString());
+                } catch(err) {}
+              });
+            }
+          }
+        });
+      } catch(e) {}
+    }
+
+    // Identifica o papel desta página na hierarquia de envio do bot
+    getRole() {
+      const pathname = (window.location.pathname || '').toLowerCase();
+      const urlParams = new URLSearchParams(window.location.search);
+
+      if (urlParams.get('bot') === 'false' || urlParams.get('welcome_bot') === 'false') {
+        return 'disabled';
+      }
+      if (urlParams.get('role') === 'master' || pathname.includes('alerts.html')) {
+        return 'master'; // Alertas dedicados = prioridade máxima (0ms delay)
+      }
+      if (pathname.includes('index.html')) {
+        return urlParams.get('standalone_bot') === 'true' ? 'master' : 'dashboard';
+      }
+      // Cenas do OBS com overlay (gameplay.html, conversa.html, react.html)
+      return 'scene'; // Prioridade secundária (aguarda 1200ms para checar envio mestre)
     }
 
     async connect(reconnectUrl = null) {
@@ -495,7 +561,7 @@
               }
             }
 
-            // Dispara alerta visual e mensagem de boas-vindas no chat para cada novo seguidor detectado
+            // Dispara alerta visual para cada novo seguidor detectado
             for (const followerName of newFollowers) {
               console.log(`[EventSub] ★ NOVO SEGUIDOR IDENTIFICADO VIA WATCHDOG: ${followerName}`);
               if (window.triggerTwitchAlert) {
@@ -506,7 +572,11 @@
                   detail: 'começou a seguir o canal!'
                 });
               }
-              this.sendWelcomeMessage(followerName);
+              // O Watchdog só dispara mensagem no chat se o WebSocket estiver DESCONECTADO (fallback de emergência)
+              // Se o WebSocket estiver ativo, o evento channel.follow já é o canal oficial de envio
+              if (this.status !== 'connected') {
+                this.sendWelcomeMessage(followerName);
+              }
             }
 
             // Atualiza letreiro e HUD com o seguidor mais recente
@@ -1000,27 +1070,71 @@
         return { success: false, error: 'Bot desativado nas preferências.' };
       }
 
+      const role = this.getRole();
+      if (!isTest) {
+        if (role === 'disabled') {
+          console.log('[WelcomeBot] Bot de boas-vindas desativado nesta fonte.');
+          return { success: false, error: 'Bot desativado nesta fonte.' };
+        }
+        // Se estiver no Painel de Controle (index.html), delega envio de seguidores reais ao OBS para evitar duplicata
+        if (role === 'dashboard') {
+          console.log('[WelcomeBot] Painel de Controle: envio de boas-vindas para seguidor real delegado ao OBS Studio.');
+          return { success: false, error: 'Envio delegado ao OBS Studio.' };
+        }
+      }
+
       const lowerFollower = followerName.toLowerCase().trim();
       const dedupeKey = `dec4land_welcome_sent_${lowerFollower}`;
       const now = Date.now();
+      const LOCK_WINDOW_MS = 600000; // 10 minutos de retenção anti-duplicação
 
       // Trava atômica multi-cenas (evita duplicação caso múltiplas cenas OBS estejam abertas)
       if (!isTest) {
+        // 1. Verificação local em memória
         if (this.recentFollowerWelcomeSet.has(lowerFollower)) {
-          console.log(`[WelcomeBot] Mensagem já disparada nesta instância para @${followerName}.`);
-          return { success: false, error: 'Mensagem já disparada nesta cena.' };
+          console.log(`[WelcomeBot] Mensagem já disparada nesta sessão para @${followerName}.`);
+          return { success: false, error: 'Mensagem já disparada nesta sessão.' };
         }
 
+        // 2. Verificação no localStorage compartilhado
         const lastSent = parseInt(localStorage.getItem(dedupeKey) || '0', 10);
-        if (now - lastSent < 90000) { // Janela de 90 segundos de proteção
-          console.log(`[WelcomeBot] Mensagem para @${followerName} já enviada recentemente por outra cena do OBS.`);
-          return { success: false, error: 'Mensagem já enviada por outra cena do OBS.' };
+        if (now - lastSent < LOCK_WINDOW_MS) {
+          console.log(`[WelcomeBot] Mensagem para @${followerName} já enviada recentemente por outra cena (${Math.round((now - lastSent) / 1000)}s atrás).`);
+          return { success: false, error: 'Mensagem já enviada recentemente.' };
         }
 
-        // Grava a trava imediatamente antes do fetch
-        localStorage.setItem(dedupeKey, now.toString());
+        // 3. Se for uma cena secundária (gameplay, conversa, react), aguarda 1200ms
+        // permitindo que a fonte mestre (alerts.html) dispare e propague a trava via BroadcastChannel / IRC
+        const delay = (role === 'scene') ? 1200 : 0;
+        if (delay > 0) {
+          console.log(`[WelcomeBot] Cena secundária: aguardando ${delay}ms para verificar se fonte mestre envia...`);
+          await new Promise(r => setTimeout(r, delay));
+
+          // Reavalia após o delay se a fonte mestre ou o chat IRC já capturou o envio
+          if (this.recentFollowerWelcomeSet.has(lowerFollower)) {
+            console.log(`[WelcomeBot] Mensagem para @${followerName} confirmada pela fonte mestre durante a espera.`);
+            return { success: false, error: 'Mensagem já enviada pela fonte mestre.' };
+          }
+          const recheck = parseInt(localStorage.getItem(dedupeKey) || '0', 10);
+          if (Date.now() - recheck < LOCK_WINDOW_MS) {
+            console.log(`[WelcomeBot] Mensagem para @${followerName} confirmada em outra cena do OBS.`);
+            return { success: false, error: 'Mensagem já enviada por outra cena.' };
+          }
+        }
+
+        // 4. Grava trava local, localStorage e notifica todas as outras abas/cenas via BroadcastChannel
         this.recentFollowerWelcomeSet.add(lowerFollower);
-        setTimeout(() => this.recentFollowerWelcomeSet.delete(lowerFollower), 90000);
+        try {
+          localStorage.setItem(dedupeKey, Date.now().toString());
+          if (this.welcomeBc) {
+            this.welcomeBc.postMessage({
+              action: 'claim_welcome',
+              user: lowerFollower,
+              timestamp: Date.now()
+            });
+          }
+        } catch(e) {}
+        setTimeout(() => this.recentFollowerWelcomeSet.delete(lowerFollower), LOCK_WINDOW_MS);
       }
 
       // Monta template configurado

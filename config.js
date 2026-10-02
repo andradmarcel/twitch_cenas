@@ -16,7 +16,7 @@ const baseConfig = {
 
   // Twitch EventSub WebSocket (Alertas de Follow, Sub, Bits, Raid em tempo real)
   twitchClientId: "gp762nuuoqcoxypju8c569th9wz7q5",
-  twitchOAuthToken: "7iy78ciiw8r4x98eq4029p24qcpchw",
+  twitchOAuthToken: "", // Mantenha vazio aqui. Seu token real fica seguro no config.local.js
 
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
   latestFollower: "O_AmanteBR",

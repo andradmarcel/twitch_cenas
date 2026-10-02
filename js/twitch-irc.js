@@ -161,6 +161,22 @@
             console.error('[TwitchIRC] Error in onMessage callback:', err);
           }
         }
+
+        // Dispara evento global para que o bot e o eventsub sincronizem mensagens enviadas no chat
+        try {
+          window.dispatchEvent(new CustomEvent('dec4land_twitch_irc_message', {
+            detail: {
+              username,
+              displayName,
+              message: messageText,
+              color,
+              badges: rawBadges,
+              badgesMap,
+              highlight,
+              tags
+            }
+          }));
+        } catch(e) {}
       }
 
       // USERNOTICE (Subs, Resubs, Raids, Subgifts)
