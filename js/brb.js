@@ -216,6 +216,21 @@
   window.addEventListener('keydown', handleKeyDown, true);
   document.addEventListener('keydown', handleKeyDown, true);
 
+  // Apply dynamic config (streamer name and social handles)
+  function applyConfig() {
+    const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
+    const twitterEl = document.querySelector('.social-item:nth-child(1) .social-handle');
+    if (twitterEl && cfg.socialTwitter) twitterEl.textContent = cfg.socialTwitter;
+
+    const instaEl = document.querySelector('.social-item:nth-child(2) .social-handle');
+    if (instaEl && cfg.socialInstagram) instaEl.textContent = cfg.socialInstagram;
+
+    const ytEl = document.querySelector('.social-item:nth-child(3) .social-handle');
+    if (ytEl && cfg.socialYoutube) ytEl.textContent = cfg.socialYoutube;
+  }
+  applyConfig();
+  window.addEventListener('dec4land_config_updated', applyConfig);
+
   // Start timer loop
   updateTimerDisplay();
   timerInterval = setInterval(tick, 1000);

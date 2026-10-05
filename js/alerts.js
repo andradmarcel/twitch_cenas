@@ -239,17 +239,21 @@
         String(alertData.id || '').startsWith('url_test_') || 
         (alertData.user || '').toLowerCase() === 'marcel_gamer';
 
-      // Chaves de desduplicação robustas (Universal: tipo + usuário, e ID explícito)
-      const userTypeKey = userKey ? `${typeKey}::${userKey}` : null;
+      // Chaves de desduplicação refinadas:
+      // Para eventos monetários (bits, donate, pix) e gifts, inclui valor e mensagem para NÃO descartar doações/cheers consecutivos legítimos
+      const isMonetaryOrGift = (typeKey === 'bits' || typeKey === 'cheer' || typeKey === 'donation' || typeKey === 'donate' || typeKey === 'pix' || alertData.isGift);
+      const userTypeKey = userKey ? (isMonetaryOrGift 
+        ? `${typeKey}::${userKey}::${alertData.amount || alertData.total || ''}::${alertData.message || ''}` 
+        : `${typeKey}::${userKey}`) : null;
       const explicitId = alertData.id ? String(alertData.id).toLowerCase().trim() : null;
 
-      // 1. Verificação de duplicata por ID explícito ou por Usuário+Tipo nos últimos 15 segundos
+      // 1. Verificação de duplicata por ID explícito ou por chave composta
       if (explicitId && this.recentAlertIds.has(explicitId)) {
         console.log(`[Alerts] Descartando alerta duplicado por ID: ${explicitId}`);
         return;
       }
       if (!isTestAlert && userTypeKey && this.recentAlertIds.has(userTypeKey)) {
-        console.log(`[Alerts] Descartando alerta duplicado por Usuário+Tipo: ${userTypeKey}`);
+        console.log(`[Alerts] Descartando alerta duplicado por chave composta: ${userTypeKey}`);
         return;
       }
 
@@ -260,14 +264,15 @@
         setTimeout(() => this.recentAlertIds.delete(`sub::${recipientKey}`), 25000);
       }
 
-      // Registra chaves no conjunto de supressão temporária (15 segundos)
+      // Registra chaves no conjunto de supressão temporária (15s para follows/subs únicos, 6s para repetição exata de monetário)
+      const suppressTime = isMonetaryOrGift ? 6000 : 15000;
       if (explicitId) {
         this.recentAlertIds.add(explicitId);
         setTimeout(() => this.recentAlertIds.delete(explicitId), 15000);
       }
       if (!isTestAlert && userTypeKey) {
         this.recentAlertIds.add(userTypeKey);
-        setTimeout(() => this.recentAlertIds.delete(userTypeKey), 15000);
+        setTimeout(() => this.recentAlertIds.delete(userTypeKey), suppressTime);
       }
 
       this.queue.push(alertData);
@@ -280,11 +285,21 @@
             localStorage.setItem('dec4land_real_follower', alertData.user);
             if (this.broadcastChannel) this.broadcastChannel.postMessage({ action: 'update_hud_info', follower: alertData.user });
           } else if ((type === 'sub' || type === 'resub') && alertData.user) {
-            const subText = alertData.isGift ? `${alertData.user} (Gift)` : alertData.user;
+            let subText = alertData.user;
+            if (alertData.isGift) {
+              const count = alertData.total || alertData.subCount;
+              subText = (count && Number(count) > 1) ? `${alertData.user} (${count}x Gift)` : `${alertData.user} (Gift)`;
+            } else if (alertData.months) {
+              subText = `${alertData.user} (${alertData.months}m)`;
+            }
             localStorage.setItem('dec4land_real_sub', subText);
             if (this.broadcastChannel) this.broadcastChannel.postMessage({ action: 'update_hud_info', sub: subText });
           } else if ((type === 'donation' || type === 'donate' || type === 'pix') && alertData.user) {
-            const amt = alertData.amount ? `${alertData.user} (${alertData.amount})` : alertData.user;
+            let amt = alertData.user;
+            if (alertData.amount) {
+              const formattedAmount = String(alertData.amount).trim();
+              amt = formattedAmount.startsWith('(') ? `${alertData.user} ${formattedAmount}` : `${alertData.user} (${formattedAmount})`;
+            }
             localStorage.setItem('dec4land_real_donate', amt);
             if (this.broadcastChannel) this.broadcastChannel.postMessage({ action: 'update_hud_info', donate: amt });
           }

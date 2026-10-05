@@ -73,16 +73,28 @@
   let realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '-';
 
   // Limpa automaticamente qualquer resquício de teste sintético 'Marcel_Gamer' ou 'Marcel (R$ 50,00)'
-  if (realSub && (realSub.toLowerCase().includes('marcel_gamer') || realSub.toLowerCase() === 'marcel')) {
-    realSub = (cfg.latestSub && !cfg.latestSub.toLowerCase().includes('marcel')) ? cfg.latestSub : '-';
+  const isSyntheticTestValue = (val) => {
+    if (!val) return false;
+    const v = String(val).trim().toLowerCase();
+    return v === 'marcel_gamer' ||
+           v === 'marcel' ||
+           v === 'marcel_gamer (r$ 50,00)' ||
+           v === 'marcel_gamer (r$ 25,00)' ||
+           v === 'marcel (r$ 50,00)' ||
+           v === 'marcel (tier 1)' ||
+           v === 'lucas_apoiador (r$ 25,00)';
+  };
+
+  if (realSub && isSyntheticTestValue(realSub)) {
+    realSub = (cfg.latestSub && !isSyntheticTestValue(cfg.latestSub)) ? cfg.latestSub : '-';
     try { localStorage.removeItem('dec4land_real_sub'); } catch(e) {}
   }
-  if (realDonate && (realDonate.toLowerCase().includes('marcel') || realDonate.includes('50,00'))) {
-    realDonate = (cfg.latestDonate && !cfg.latestDonate.toLowerCase().includes('marcel')) ? cfg.latestDonate : '-';
+  if (realDonate && isSyntheticTestValue(realDonate)) {
+    realDonate = (cfg.latestDonate && !isSyntheticTestValue(cfg.latestDonate)) ? cfg.latestDonate : '-';
     try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
   }
-  if (realFollower && (realFollower.toLowerCase().includes('marcel_gamer') || realFollower.toLowerCase() === 'marcel')) {
-    realFollower = (cfg.latestFollower && !cfg.latestFollower.toLowerCase().includes('marcel')) ? cfg.latestFollower : '-';
+  if (realFollower && isSyntheticTestValue(realFollower)) {
+    realFollower = (cfg.latestFollower && !isSyntheticTestValue(cfg.latestFollower)) ? cfg.latestFollower : '-';
     try { localStorage.removeItem('dec4land_real_follower'); } catch(e) {}
   }
 
@@ -102,18 +114,48 @@
   }
 
   window.updateFollower = function(name) {
+    if (!name) return;
     try { localStorage.setItem('dec4land_real_follower', name); } catch(e) {}
     updatePill(followerEl, name);
   };
   window.updateDonate = function(user, amount) {
+    if (!user) return;
     const text = amount ? `${user} (${amount})` : user;
     try { localStorage.setItem('dec4land_real_donate', text); } catch(e) {}
     updatePill(donateEl, text);
   };
   window.updateSub = function(name, months) {
+    if (!name) return;
     const text = months ? `${name} (${months}m)` : name;
     try { localStorage.setItem('dec4land_real_sub', text); } catch(e) {}
     updatePill(subEl, text);
+  };
+
+  // Atualiza pílulas do overlay e propaga alerta via BroadcastChannel
+  window.triggerTwitchAlert = function(data, broadcast = true) {
+    if (!data) return;
+    const type = (data.type || '').toLowerCase();
+    const user = data.user || 'Viewer';
+
+    if (type === 'follow' || type === 'follower') {
+      window.updateFollower(user);
+    } else if (type === 'donate' || type === 'donation' || type === 'pix') {
+      const amt = data.amount ? (String(data.amount).includes('R$') ? data.amount : `R$ ${data.amount}`) : 'R$ 10,00';
+      window.updateDonate(user, amt);
+    } else if (type === 'sub' || type === 'resub') {
+      window.updateSub(user, data.months || null);
+    } else if (type === 'bits' || type === 'cheer') {
+      window.updateDonate(user, `${data.amount || '100'} bits`);
+    }
+
+    if (broadcast && alertBroadcast) {
+      try {
+        alertBroadcast.postMessage({
+          action: 'trigger_alert',
+          payload: data
+        });
+      } catch(e) {}
+    }
   };
 
   // Cross-scene sync via BroadcastChannel & storage
@@ -214,37 +256,64 @@
     const defaultColors = ['#ff527b', '#00e5ff', '#ffb800', '#a855f7', '#00ff7f', '#38bdf8', '#fb7185', '#f43f5e'];
     const userColor = data.color || defaultColors[Math.abs(data.username.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)) % defaultColors.length];
 
-    // Build badges
-    let badgesHtml = '';
-    if (data.badges) {
-      if (data.badges.broadcaster) badgesHtml += '<span class="chat-badge-icon chat-badge-broadcaster">STREAMER</span>';
-      if (data.badges.moderator) badgesHtml += '<span class="chat-badge-icon chat-badge-mod">MOD</span>';
-      if (data.badges.vip) badgesHtml += '<span class="chat-badge-icon chat-badge-vip">VIP</span>';
-      if (data.badges.subscriber) badgesHtml += '<span class="chat-badge-icon chat-badge-sub">SUB</span>';
+    // Build badges (normaliza para suportar tanto Objeto quanto Array)
+    let badgeMap = {};
+    if (Array.isArray(data.badges)) {
+      data.badges.forEach(b => {
+        const [k] = String(b).toLowerCase().split('/');
+        badgeMap[k] = true;
+      });
+    } else if (data.badges && typeof data.badges === 'object') {
+      badgeMap = data.badges;
     }
 
-    let parsedText = data.emotesHtml || sanitize(data.message);
+    let badgesHtml = '';
+    if (badgeMap.broadcaster) badgesHtml += '<span class="chat-badge-icon chat-badge-broadcaster">STREAMER</span>';
+    if (badgeMap.moderator || badgeMap.mod) badgesHtml += '<span class="chat-badge-icon chat-badge-mod">MOD</span>';
+    if (badgeMap.vip) badgesHtml += '<span class="chat-badge-icon chat-badge-vip">VIP</span>';
+    if (badgeMap.subscriber || badgeMap.sub) badgesHtml += '<span class="chat-badge-icon chat-badge-sub">SUB</span>';
+    if (badgeMap.prime) badgesHtml += '<span class="chat-badge-icon chat-badge-prime">PRIME</span>';
 
-    // Fallback de parsing de emotes se passado como objeto
-    if (!data.emotesHtml && data.emotes && typeof data.emotes === 'object') {
+    let parsedText = '';
+    if (data.emotesHtml) {
+      parsedText = data.emotesHtml;
+    } else if (data.emotes && typeof data.emotes === 'object') {
       const replacements = [];
       Object.keys(data.emotes).forEach(id => {
         const ranges = data.emotes[id];
         ranges.forEach(range => {
           const [s, e] = range.split('-').map(Number);
-          replacements.push({
-            id,
-            start: s,
-            end: e,
-            raw: data.message.substring(s, e + 1)
-          });
+          if (!isNaN(s) && !isNaN(e) && s >= 0 && e >= s && e < (data.message || '').length) {
+            replacements.push({
+              id,
+              start: s,
+              end: e,
+              raw: data.message.substring(s, e + 1)
+            });
+          }
         });
       });
-      replacements.sort((a, b) => b.start - a.start);
-      replacements.forEach(rep => {
-        const imgTag = `<img src="https://static-cdn.jtvnw.net/emoticons/v2/${rep.id}/default/dark/1.0" alt="${sanitize(rep.raw)}" class="chat-emote-img" style="vertical-align: middle; height: 24px; margin: 0 2px;">`;
-        parsedText = parsedText.substring(0, rep.start) + imgTag + parsedText.substring(rep.end + 1);
-      });
+
+      if (replacements.length === 0) {
+        parsedText = sanitize(data.message || '');
+      } else {
+        replacements.sort((a, b) => a.start - b.start);
+        let cur = 0;
+        let html = '';
+        for (const rep of replacements) {
+          if (rep.start < cur) continue;
+          html += sanitize(data.message.substring(cur, rep.start));
+          const safeAlt = sanitize(rep.raw);
+          html += `<img src="https://static-cdn.jtvnw.net/emoticons/v2/${rep.id}/default/dark/1.0" alt="${safeAlt}" title="${safeAlt}" class="chat-emote-img" style="vertical-align: middle; height: 24px; margin: 0 2px;">`;
+          cur = rep.end + 1;
+        }
+        if (cur < data.message.length) {
+          html += sanitize(data.message.substring(cur));
+        }
+        parsedText = html;
+      }
+    } else {
+      parsedText = sanitize(data.message || '');
     }
 
     row.innerHTML = `
@@ -288,6 +357,29 @@
           badges: msg.badgesMap,
           emotesHtml: msg.emotesHtml
         });
+      },
+      onNotice: (notice) => {
+        if (!notice) return;
+        if (notice.msgId === 'sub' || notice.msgId === 'resub') {
+          if (typeof window.updateSub === 'function') {
+            window.updateSub(notice.user, notice.months);
+          }
+          appendChatMessage({
+            username: 'system',
+            displayName: 'DEC4LAND SYSTEM',
+            message: `🎉 ${notice.user} assinou o canal (${notice.months || 1} meses)!`,
+            color: '#ffb800',
+            badges: { subscriber: true }
+          });
+        } else if (notice.msgId === 'raid') {
+          appendChatMessage({
+            username: 'system',
+            displayName: 'DEC4LAND SYSTEM',
+            message: `🚀 RAID! ${notice.user} chegou com ${notice.viewers || 1} espectadores!`,
+            color: '#00d2ff',
+            badges: { broadcaster: true }
+          });
+        }
       }
     });
 
@@ -315,10 +407,20 @@
     });
   };
 
-  // Keyboard shortcut: Press 'C' to simulate chat in OBS interaction mode
+  // Keyboard shortcuts: Press 'C' to simulate chat, 'T' to trigger test alert in OBS interaction mode
   window.addEventListener('keydown', (e) => {
     if (e.key === 'c' || e.key === 'C') {
       window.simulateChatMessage();
+    } else if (e.key === 't' || e.key === 'T') {
+      if (typeof window.triggerTwitchAlert === 'function') {
+        window.triggerTwitchAlert({
+          id: `test_${Date.now()}`,
+          type: 'follower',
+          user: 'Viewer_Teste',
+          detail: 'começou a seguir o canal!',
+          isTest: true
+        });
+      }
     }
   });
 

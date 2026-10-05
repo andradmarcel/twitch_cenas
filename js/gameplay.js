@@ -41,16 +41,28 @@
   let realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '';
 
   // Limpa automaticamente qualquer resquício de teste sintético 'Marcel_Gamer' ou 'Marcel (R$ 50,00)'
-  if (realSub && (realSub.toLowerCase().includes('marcel_gamer') || realSub.toLowerCase() === 'marcel')) {
-    realSub = (cfg.latestSub && !cfg.latestSub.toLowerCase().includes('marcel')) ? cfg.latestSub : '';
+  const isSyntheticTestValue = (val) => {
+    if (!val) return false;
+    const v = String(val).trim().toLowerCase();
+    return v === 'marcel_gamer' ||
+           v === 'marcel' ||
+           v === 'marcel_gamer (r$ 50,00)' ||
+           v === 'marcel_gamer (r$ 25,00)' ||
+           v === 'marcel (r$ 50,00)' ||
+           v === 'marcel (tier 1)' ||
+           v === 'lucas_apoiador (r$ 25,00)';
+  };
+
+  if (realSub && isSyntheticTestValue(realSub)) {
+    realSub = (cfg.latestSub && !isSyntheticTestValue(cfg.latestSub)) ? cfg.latestSub : '';
     try { localStorage.removeItem('dec4land_real_sub'); } catch(e) {}
   }
-  if (realDonate && (realDonate.toLowerCase().includes('marcel') || realDonate.includes('50,00'))) {
-    realDonate = (cfg.latestDonate && !cfg.latestDonate.toLowerCase().includes('marcel')) ? cfg.latestDonate : '-';
+  if (realDonate && isSyntheticTestValue(realDonate)) {
+    realDonate = (cfg.latestDonate && !isSyntheticTestValue(cfg.latestDonate)) ? cfg.latestDonate : '-';
     try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
   }
-  if (realFollower && (realFollower.toLowerCase().includes('marcel_gamer') || realFollower.toLowerCase() === 'marcel')) {
-    realFollower = (cfg.latestFollower && !cfg.latestFollower.toLowerCase().includes('marcel')) ? cfg.latestFollower : '';
+  if (realFollower && isSyntheticTestValue(realFollower)) {
+    realFollower = (cfg.latestFollower && !isSyntheticTestValue(cfg.latestFollower)) ? cfg.latestFollower : '';
     try { localStorage.removeItem('dec4land_real_follower'); } catch(e) {}
   }
 

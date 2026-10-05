@@ -61,17 +61,28 @@
   let realDonate = urlParams.get('donate') || localStorage.getItem('dec4land_real_donate') || cfg.latestDonate || '-';
   let realSub = urlParams.get('sub') || localStorage.getItem('dec4land_real_sub') || cfg.latestSub || '-';
 
-  // Limpa automaticamente qualquer resquício de teste sintético 'Marcel_Gamer' ou 'Marcel (R$ 50,00)'
-  if (realSub && (realSub.toLowerCase().includes('marcel_gamer') || realSub.toLowerCase() === 'marcel')) {
-    realSub = (cfg.latestSub && !cfg.latestSub.toLowerCase().includes('marcel')) ? cfg.latestSub : '-';
+  // Limpa estritamente valores sintéticos de teste de desenvolvimento sem afetar usuários reais
+  const isSyntheticTestValue = (val) => {
+    if (!val) return false;
+    const v = String(val).toLowerCase().trim();
+    return v === 'marcel_gamer' ||
+           v === 'marcel_gamer (r$ 50,00)' ||
+           v === 'marcel_gamer (r$ 25,00)' ||
+           v === 'marcel (r$ 50,00)' ||
+           v === 'marcel (tier 1)' ||
+           v === 'lucas_apoiador (r$ 25,00)';
+  };
+
+  if (realSub && isSyntheticTestValue(realSub)) {
+    realSub = (cfg.latestSub && !isSyntheticTestValue(cfg.latestSub)) ? cfg.latestSub : '-';
     try { localStorage.removeItem('dec4land_real_sub'); } catch(e) {}
   }
-  if (realDonate && (realDonate.toLowerCase().includes('marcel') || realDonate.includes('50,00'))) {
-    realDonate = (cfg.latestDonate && !cfg.latestDonate.toLowerCase().includes('marcel')) ? cfg.latestDonate : '-';
+  if (realDonate && isSyntheticTestValue(realDonate)) {
+    realDonate = (cfg.latestDonate && !isSyntheticTestValue(cfg.latestDonate)) ? cfg.latestDonate : '-';
     try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
   }
-  if (realFollower && (realFollower.toLowerCase().includes('marcel_gamer') || realFollower.toLowerCase() === 'marcel')) {
-    realFollower = (cfg.latestFollower && !cfg.latestFollower.toLowerCase().includes('marcel')) ? cfg.latestFollower : '-';
+  if (realFollower && isSyntheticTestValue(realFollower)) {
+    realFollower = (cfg.latestFollower && !isSyntheticTestValue(cfg.latestFollower)) ? cfg.latestFollower : '-';
     try { localStorage.removeItem('dec4land_real_follower'); } catch(e) {}
   }
 
@@ -149,6 +160,33 @@
     }
   } catch(e) {}
 
+  // Atualiza pílulas da moldura de conversa e delega o alerta visual/sonoro para alerts.html via BroadcastChannel
+  window.triggerTwitchAlert = function(data, broadcast = true) {
+    if (!data) return;
+    const type = (data.type || '').toLowerCase();
+    const user = data.user || 'Viewer';
+
+    if (type === 'follow' || type === 'follower') {
+      window.updateFollower(user);
+    } else if (type === 'donate' || type === 'donation' || type === 'pix') {
+      const amt = data.amount ? (String(data.amount).includes('R$') ? data.amount : `R$ ${data.amount}`) : 'R$ 10,00';
+      window.updateDonate(user, amt);
+    } else if (type === 'sub' || type === 'resub') {
+      window.updateSub(user, data.months || null);
+    } else if (type === 'bits' || type === 'cheer') {
+      window.updateDonate(user, `${data.amount || '100'} bits`);
+    }
+
+    if (broadcast && alertBroadcast) {
+      try {
+        alertBroadcast.postMessage({
+          action: 'trigger_alert',
+          payload: data
+        });
+      } catch(e) {}
+    }
+  };
+
   window.addEventListener('storage', (e) => {
     if (e.key === 'dec4land_real_follower' && e.newValue) updatePill(followerEl, e.newValue);
     if (e.key === 'dec4land_real_donate' && e.newValue) updatePill(donateEl, e.newValue);
@@ -174,6 +212,10 @@
   }
 
   function formatEmotes(text, emotesTag) {
+    if (!text) return '';
+    if (window.TwitchIrcClient && typeof window.TwitchIrcClient.formatEmotes === 'function') {
+      return window.TwitchIrcClient.formatEmotes(text, emotesTag);
+    }
     if (!emotesTag) return escapeHtml(text);
 
     const replacements = [];
@@ -183,22 +225,27 @@
       if (!positions) return;
       positions.split(',').forEach(pos => {
         const [start, end] = pos.split('-').map(Number);
-        if (!isNaN(start) && !isNaN(end)) {
+        if (!isNaN(start) && !isNaN(end) && start >= 0 && end >= start && end < text.length) {
           replacements.push({ id, start, end });
         }
       });
     });
 
-    replacements.sort((a, b) => b.start - a.start);
+    if (replacements.length === 0) return escapeHtml(text);
 
-    let html = text;
-    replacements.forEach(r => {
-      const before = html.substring(0, r.start);
-      const after = html.substring(r.end + 1);
-      const emoteImg = `<img class="twitch-emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/2.0" alt="emote">`;
-      html = before + emoteImg + after;
-    });
-
+    replacements.sort((a, b) => a.start - b.start);
+    let cur = 0;
+    let html = '';
+    for (const r of replacements) {
+      if (r.start < cur) continue;
+      html += escapeHtml(text.substring(cur, r.start));
+      const safeAlt = escapeHtml(text.substring(r.start, r.end + 1));
+      html += `<img class="twitch-emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/2.0" alt="${safeAlt}" title="${safeAlt}">`;
+      cur = r.end + 1;
+    }
+    if (cur < text.length) {
+      html += escapeHtml(text.substring(cur));
+    }
     return html;
   }
 
@@ -235,17 +282,25 @@
     msgEl.className = 'chat-msg-item';
     if (highlight) msgEl.classList.add(`msg-highlight-${highlight}`);
 
+    // Normaliza badges para suportar tanto Array ['broadcaster/1'] quanto Objeto { broadcaster: true }
+    let badgeList = [];
+    if (Array.isArray(badges)) {
+      badgeList = badges;
+    } else if (badges && typeof badges === 'object') {
+      badgeList = Object.keys(badges).filter(k => badges[k]);
+    }
+
     // Badges HTML
     let badgesHtml = '';
-    badges.forEach(b => {
-      const bKey = b.toLowerCase();
+    badgeList.forEach(b => {
+      const bKey = String(b).toLowerCase();
       if (bKey.startsWith('broadcaster')) {
         badgesHtml += '<span class="chat-badge badge-broadcaster">STREAMER</span>';
-      } else if (bKey.startsWith('moderator')) {
+      } else if (bKey.startsWith('moderator') || bKey === 'mod') {
         badgesHtml += '<span class="chat-badge badge-mod">MOD</span>';
       } else if (bKey.startsWith('vip')) {
         badgesHtml += '<span class="chat-badge badge-vip">VIP</span>';
-      } else if (bKey.startsWith('subscriber')) {
+      } else if (bKey.startsWith('subscriber') || bKey === 'sub') {
         badgesHtml += '<span class="chat-badge badge-sub">SUB</span>';
       } else if (bKey.startsWith('prime')) {
         badgesHtml += '<span class="chat-badge badge-prime">PRIME</span>';
@@ -359,10 +414,20 @@
     }, 6500);
   }
 
-  // Keyboard shortcut: 'C' to simulate chat message
+  // Keyboard shortcuts: 'C' to simulate chat message, 'T' to trigger test alert
   window.addEventListener('keydown', (e) => {
     if (e.key === 'c' || e.key === 'C') {
       window.simulateChatMessage();
+    } else if (e.key === 't' || e.key === 'T') {
+      if (typeof window.triggerTwitchAlert === 'function') {
+        window.triggerTwitchAlert({
+          id: `test_${Date.now()}`,
+          type: 'follower',
+          user: 'Viewer_Teste',
+          detail: 'começou a seguir o canal!',
+          isTest: true
+        });
+      }
     }
   });
 

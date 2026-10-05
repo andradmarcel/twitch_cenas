@@ -7,7 +7,9 @@
     constructor() {
       this.ws = null;
       this.sessionId = null;
-      this.broadcasterId = '227485020'; // ID oficial do canal dec4land
+      const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
+      const channel = (cfg.twitchChannel || 'dec4land').toLowerCase().replace(/^@|^#/, '').trim();
+      this.broadcasterId = cfg.broadcasterId || (channel === 'dec4land' ? '227485020' : null);
       this.senderId = null;
       this.tokenScopes = new Set();
       this.recentFollowerWelcomeSet = new Set();
@@ -20,7 +22,7 @@
       this.keepaliveTimer = null;
       this.statusListeners = new Set();
       this.activeSubscriptions = new Set();
-      this.lastKnownFollower = localStorage.getItem('dec4land_real_follower') || window.DEC4LAND_CONFIG?.latestFollower || window.DEC4LAND_LOCAL_CONFIG?.latestFollower || 'drxxxfps';
+      this.lastKnownFollower = localStorage.getItem('dec4land_real_follower') || cfg.latestFollower || '-';
 
       this.initBroadcastSync();
 
@@ -79,12 +81,7 @@
       }));
 
       // Notifica outras abas/cenas se aplicável
-      try {
-        if ('BroadcastChannel' in window) {
-          const bc = new BroadcastChannel('dec4land_eventsub_channel');
-          bc.postMessage({ action: 'status_update', status: newStatus, message });
-        }
-      } catch(e) {}
+      this.postEventSubMessage({ action: 'status_update', status: newStatus, message });
     }
 
     onStatusChange(callback) {
@@ -95,28 +92,48 @@
       }
     }
 
+    postAlertMessage(msg) {
+      if (this.alertsBc) {
+        try { this.alertsBc.postMessage(msg); } catch(e) {}
+      }
+    }
+
+    postEventSubMessage(msg) {
+      if (this.eventsubBc) {
+        try { this.eventsubBc.postMessage(msg); } catch(e) {}
+      }
+    }
+
     initBroadcastSync() {
       try {
         if ('BroadcastChannel' in window) {
-          const bc = new BroadcastChannel('dec4land_eventsub_channel');
-          bc.onmessage = (e) => {
-            if (e.data && e.data.action === 'credentials_updated') {
-              console.log('[EventSub] Credenciais atualizadas externamente. Reconectando...');
-              this.connect();
-            }
-          };
+          if (!this.eventsubBc) {
+            this.eventsubBc = new BroadcastChannel('dec4land_eventsub_channel');
+            this.eventsubBc.onmessage = (e) => {
+              if (e.data && e.data.action === 'credentials_updated') {
+                console.log('[EventSub] Credenciais atualizadas externamente. Reconectando...');
+                this.connect();
+              }
+            };
+          }
+
+          if (!this.alertsBc) {
+            this.alertsBc = new BroadcastChannel('dec4land_stream_alerts');
+          }
 
           // Canal dedicado para sincronizar e travar o envio de boas-vindas entre todas as abas e cenas
-          this.welcomeBc = new BroadcastChannel('dec4land_welcome_bot');
-          this.welcomeBc.onmessage = (e) => {
-            if (e.data && e.data.action === 'claim_welcome' && e.data.user) {
-              const u = String(e.data.user).toLowerCase().trim();
-              this.recentFollowerWelcomeSet.add(u);
-              try {
-                localStorage.setItem(`dec4land_welcome_sent_${u}`, (e.data.timestamp || Date.now()).toString());
-              } catch(err) {}
-            }
-          };
+          if (!this.welcomeBc) {
+            this.welcomeBc = new BroadcastChannel('dec4land_welcome_bot');
+            this.welcomeBc.onmessage = (e) => {
+              if (e.data && e.data.action === 'claim_welcome' && e.data.user) {
+                const u = String(e.data.user).toLowerCase().trim();
+                this.recentFollowerWelcomeSet.add(u);
+                try {
+                  localStorage.setItem(`dec4land_welcome_sent_${u}`, (e.data.timestamp || Date.now()).toString());
+                } catch(err) {}
+              }
+            };
+          }
         }
       } catch(e) {}
 
@@ -177,6 +194,10 @@
 
     async connect(reconnectUrl = null) {
       this.manualDisconnect = false;
+      if (this._configRetryTimer) {
+        clearTimeout(this._configRetryTimer);
+        this._configRetryTimer = null;
+      }
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
@@ -187,10 +208,10 @@
       if (!clientId || !token) {
         this.setStatus('unconfigured', 'Credenciais EventSub (Client ID ou Token) não configuradas.');
         console.log('[EventSub] Alertas de Follow aguardando Client ID e Token OAuth.');
-        if (!this._configRetryTimer) {
+        if (!this._configRetryTimer && !this.manualDisconnect) {
           this._configRetryTimer = setTimeout(() => {
             this._configRetryTimer = null;
-            this.connect();
+            if (!this.manualDisconnect) this.connect();
           }, 1500);
         }
         return;
@@ -248,6 +269,10 @@
 
     disconnect() {
       this.manualDisconnect = true;
+      if (this._configRetryTimer) {
+        clearTimeout(this._configRetryTimer);
+        this._configRetryTimer = null;
+      }
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
@@ -267,7 +292,7 @@
     }
 
     scheduleReconnect() {
-      if (this.reconnectTimer) return;
+      if (this.manualDisconnect || this.reconnectTimer) return;
 
       this.reconnectAttempts++;
       const delay = Math.min(15000, 2000 * Math.pow(1.3, Math.min(this.reconnectAttempts, 8)));
@@ -519,8 +544,8 @@
         // Sincroniza novos seguidores com a API oficial da Twitch
         await this.syncFollowerWatchdog(clientId, token);
 
-        // A cada 12s (a cada 3 voltas), atualiza o último sub diretamente da Twitch
-        if (loopCount % 3 === 0) {
+        // A cada 60s (a cada 15 voltas de 4s), atualiza o último sub diretamente da Twitch
+        if (loopCount % 15 === 0) {
           await this.fetchLatestSub(clientId, token);
         }
       }, 4000);
@@ -564,14 +589,12 @@
             // Dispara alerta visual para cada novo seguidor detectado
             for (const followerName of newFollowers) {
               console.log(`[EventSub] ★ NOVO SEGUIDOR IDENTIFICADO VIA WATCHDOG: ${followerName}`);
-              if (window.triggerTwitchAlert) {
-                window.triggerTwitchAlert({
-                  id: `follow_${followerName.toLowerCase()}_${Date.now()}`,
-                  type: 'follower',
-                  user: followerName,
-                  detail: 'começou a seguir o canal!'
-                });
-              }
+              this.dispatchAlert({
+                id: `follow_${followerName.toLowerCase()}_${Date.now()}`,
+                type: 'follower',
+                user: followerName,
+                detail: 'começou a seguir o canal!'
+              });
               // O Watchdog SEMPRE dispara a mensagem de boas-vindas como garantia máxima!
               // A trava atômica anti-duplicação (recentFollowerWelcomeSet + localStorage + BroadcastChannel)
               // impede que mensagens duplicadas sejam enviadas caso o WebSocket também processe o evento.
@@ -589,10 +612,7 @@
                 }
                 try {
                   localStorage.setItem('dec4land_real_follower', latestName);
-                  if ('BroadcastChannel' in window) {
-                    const bc = new BroadcastChannel('dec4land_stream_alerts');
-                    bc.postMessage({ action: 'update_hud_info', follower: latestName });
-                  }
+                  this.postAlertMessage({ action: 'update_hud_info', follower: latestName });
                 } catch(e) {}
               }
             }
@@ -601,50 +621,26 @@
       } catch(err) {}
     }
 
-    // Extrai a data ISO real codificada no cursor de paginação da Twitch
-    parseCursorTimestamp(cursor) {
-      if (!cursor) return 0;
-      try {
-        const raw = atob(cursor);
-        const obj = JSON.parse(raw);
-        const cur = obj.b ? obj.b.Cursor : (obj.a ? obj.a.Cursor : '');
-        if (!cur) return 0;
-        const inner = atob(cur);
-        const m = inner.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)/);
-        return m ? new Date(m[1]).getTime() : 0;
-      } catch(e) {
-        return 0;
-      }
-    }
 
-    // Consulta o sub mais recente existente no canal na Twitch Helix API (ordenado cronologicamente)
+    // Consulta os inscritos existentes no canal na Twitch Helix API via requisição única otimizada (first=100)
     async fetchLatestSub(clientId, token) {
       if (!this.broadcasterId || !token || !clientId) return null;
       try {
         let allSubs = [];
-        let cursor = '';
         const channelLower = (this.channel || 'dec4land').toLowerCase();
 
-        // Itera buscando os inscritos e suas datas de início reais gravadas nos cursores da Twitch
-        for (let i = 0; i < 15; i++) {
-          const url = `https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.broadcasterId}&first=1${cursor ? '&after=' + encodeURIComponent(cursor) : ''}`;
-          const res = await fetch(url, {
-            headers: {
-              'Client-Id': clientId,
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (!res.ok) break;
+        const url = `https://api.twitch.tv/helix/subscriptions?broadcaster_id=${this.broadcasterId}&first=100`;
+        const res = await fetch(url, {
+          headers: {
+            'Client-Id': clientId,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
           const json = await res.json();
-          if (!json.data || json.data.length === 0) break;
-
-          const sub = json.data[0];
-          const cursorStr = json.pagination?.cursor || '';
-          sub._timestamp = this.parseCursorTimestamp(cursorStr);
-          allSubs.push(sub);
-
-          cursor = cursorStr;
-          if (!cursor) break;
+          if (json.data && Array.isArray(json.data)) {
+            allSubs = json.data;
+          }
         }
 
         // Filtra a própria conta do streamer (que possui sub vitalício Tier 3 no canal)
@@ -654,9 +650,6 @@
           return uId !== String(this.broadcasterId) && uName !== channelLower && uName !== 'dec4land';
         });
 
-        // Ordena cronologicamente do mais recente para o mais antigo
-        validSubs.sort((a, b) => (b._timestamp || 0) - (a._timestamp || 0));
-
         if (validSubs.length > 0) {
           const sub = validSubs[0];
           // Se for presente, credita quem deu o presente (gifter)
@@ -665,25 +658,22 @@
             : (sub.user_name || sub.user_login);
 
           if (subName) {
-            console.log(`[EventSub] 💎 Último sub real (cronológico) carregado da Twitch: ${subName}`);
+            console.log(`[EventSub] 💎 Último sub real carregado da Twitch: ${subName}`);
             if (typeof window.updateSub === 'function') {
               window.updateSub(subName);
             }
             try {
               localStorage.setItem('dec4land_real_sub', subName);
-              if ('BroadcastChannel' in window) {
-                const bc = new BroadcastChannel('dec4land_stream_alerts');
-                bc.postMessage({
-                  action: 'update_hud_info',
-                  sub: subName
-                });
-              }
+              this.postAlertMessage({
+                action: 'update_hud_info',
+                sub: subName
+              });
             } catch(e) {}
             return subName;
           }
         }
       } catch(err) {
-        console.warn('[EventSub] Erro ao consultar último sub cronológico via Helix:', err);
+        console.warn('[EventSub] Erro ao consultar último sub via Helix:', err);
       }
 
       // Fallback: se a API falhar, usa config ou localStorage válido (nunca Marcel_Gamer)
@@ -730,13 +720,10 @@
               }
               try {
                 localStorage.setItem('dec4land_real_follower', followerName);
-                if ('BroadcastChannel' in window) {
-                  const bc = new BroadcastChannel('dec4land_stream_alerts');
-                  bc.postMessage({
-                    action: 'update_hud_info',
-                    follower: followerName
-                  });
-                }
+                this.postAlertMessage({
+                  action: 'update_hud_info',
+                  follower: followerName
+                });
               } catch(e) {}
               return followerName;
             }
@@ -748,6 +735,17 @@
         console.warn('[EventSub] Erro ao consultar último seguidor via Helix:', err);
       }
       return null;
+    }
+
+    dispatchAlert(alertData) {
+      if (typeof window.triggerTwitchAlert === 'function') {
+        window.triggerTwitchAlert(alertData);
+      } else {
+        this.postAlertMessage({
+          action: 'trigger_alert',
+          payload: alertData
+        });
+      }
     }
 
     // Roteia eventos recebidos da Twitch diretamente para os alertas e letreiros
@@ -764,14 +762,12 @@
           this.lastKnownFollower = followerName;
 
           // Dispara alerta visual e sonoro DEC4LAND
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert({
-              id: alertId,
-              type: 'follower',
-              user: followerName,
-              detail: 'começou a seguir o canal!'
-            });
-          }
+          this.dispatchAlert({
+            id: alertId,
+            type: 'follower',
+            user: followerName,
+            detail: 'começou a seguir o canal!'
+          });
 
           // Dispara mensagem automática de boas-vindas no chat da Twitch (com trava anti-duplicação OBS)
           this.sendWelcomeMessage(followerName);
@@ -784,13 +780,10 @@
           // Persiste e sincroniza em todas as cenas abertas no OBS
           try {
             localStorage.setItem('dec4land_real_follower', followerName);
-            if ('BroadcastChannel' in window) {
-              const bc = new BroadcastChannel('dec4land_stream_alerts');
-              bc.postMessage({
-                action: 'update_hud_info',
-                follower: followerName
-              });
-            }
+            this.postAlertMessage({
+              action: 'update_hud_info',
+              follower: followerName
+            });
           } catch(e) {}
           break;
         }
@@ -807,14 +800,12 @@
           const tier = event.tier === '3000' ? 'Tier 3' : event.tier === '2000' ? 'Tier 2' : 'Tier 1';
           console.log(`[EventSub] 💎 NOVO SUB REAL: ${subName} (${tier})`);
 
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert({
-              id: alertId,
-              type: 'sub',
-              user: subName,
-              detail: `assinou o canal (${tier})!`
-            });
-          }
+          this.dispatchAlert({
+            id: alertId,
+            type: 'sub',
+            user: subName,
+            detail: `assinou o canal (${tier})!`
+          });
 
           if (typeof window.updateSub === 'function') {
             window.updateSub(subName);
@@ -822,13 +813,10 @@
 
           try {
             localStorage.setItem('dec4land_real_sub', subName);
-            if ('BroadcastChannel' in window) {
-              const bc = new BroadcastChannel('dec4land_stream_alerts');
-              bc.postMessage({
-                action: 'update_hud_info',
-                sub: subName
-              });
-            }
+            this.postAlertMessage({
+              action: 'update_hud_info',
+              sub: subName
+            });
           } catch(e) {}
           break;
         }
@@ -843,29 +831,28 @@
 
           console.log(`[EventSub] 🎁 SUB DE PRESENTE: ${gifter} deu ${total} sub(s)!`);
 
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert({
-              id: alertId || `gift_${gifter.toLowerCase()}_${Date.now()}`,
-              type: 'sub',
-              user: gifter,
-              detail: detail,
-              isGift: true
-            });
-          }
+          this.dispatchAlert({
+            id: alertId || `gift_${gifter.toLowerCase()}_${Date.now()}`,
+            type: 'sub',
+            user: gifter,
+            total: total,
+            subCount: total,
+            detail: detail,
+            isGift: true
+          });
+
+          const formattedGift = `${gifter} (${total > 1 ? total + 'x Gift' : 'Gift'})`;
 
           if (typeof window.updateSub === 'function') {
-            window.updateSub(`${gifter} (${total > 1 ? total + 'x Gift' : 'Gift'})`);
+            window.updateSub(formattedGift);
           }
 
           try {
-            localStorage.setItem('dec4land_real_sub', `${gifter} (Gift)`);
-            if ('BroadcastChannel' in window) {
-              const bc = new BroadcastChannel('dec4land_stream_alerts');
-              bc.postMessage({
-                action: 'update_hud_info',
-                sub: `${gifter} (Gift)`
-              });
-            }
+            localStorage.setItem('dec4land_real_sub', formattedGift);
+            this.postAlertMessage({
+              action: 'update_hud_info',
+              sub: formattedGift
+            });
           } catch(e) {}
           break;
         }
@@ -876,19 +863,28 @@
           const msg = event.message ? event.message.text : '';
           console.log(`[EventSub] 💎 RESUB REAL: ${subName} (${months} meses)`);
 
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert({
-              id: alertId,
-              type: 'sub',
-              user: subName,
-              detail: `renovou a inscrição (${months} meses)!`,
-              message: msg
-            });
-          }
+          this.dispatchAlert({
+            id: alertId,
+            type: 'sub',
+            user: subName,
+            months: months,
+            detail: `renovou a inscrição (${months} meses)!`,
+            message: msg
+          });
+
+          const formattedResub = `${subName} (${months}m)`;
 
           if (typeof window.updateSub === 'function') {
-            window.updateSub(subName);
+            window.updateSub(subName, months);
           }
+
+          try {
+            localStorage.setItem('dec4land_real_sub', formattedResub);
+            this.postAlertMessage({
+              action: 'update_hud_info',
+              sub: formattedResub
+            });
+          } catch(e) {}
           break;
         }
 
@@ -898,15 +894,13 @@
           const msg = event.message || '';
           console.log(`[EventSub] ⚡ BITS REAIS: ${cheerName} (${bits} bits)`);
 
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert({
-              id: alertId,
-              type: 'bits',
-              user: cheerName,
-              amount: bits,
-              message: msg
-            });
-          }
+          this.dispatchAlert({
+            id: alertId,
+            type: 'bits',
+            user: cheerName,
+            amount: bits,
+            message: msg
+          });
           break;
         }
 
@@ -915,15 +909,13 @@
           const viewers = String(event.viewers || '10');
           console.log(`[EventSub] 🚨 RAID REAL: ${raiderName} (${viewers} viewers)`);
 
-          if (window.triggerTwitchAlert) {
-            window.triggerTwitchAlert({
-              id: alertId,
-              type: 'raid',
-              user: raiderName,
-              amount: viewers,
-              detail: `chegou com ${viewers} espectadores!`
-            });
-          }
+          this.dispatchAlert({
+            id: alertId,
+            type: 'raid',
+            user: raiderName,
+            amount: viewers,
+            detail: `chegou com ${viewers} espectadores!`
+          });
           break;
         }
 
@@ -937,12 +929,7 @@
       if (clientId) localStorage.setItem('dec4land_eventsub_client_id', clientId.trim());
       if (token) localStorage.setItem('dec4land_eventsub_token', token.replace(/^oauth:/i, '').replace(/^Bearer /i, '').trim());
 
-      try {
-        if ('BroadcastChannel' in window) {
-          const bc = new BroadcastChannel('dec4land_eventsub_channel');
-          bc.postMessage({ action: 'credentials_updated' });
-        }
-      } catch(e) {}
+      this.postEventSubMessage({ action: 'credentials_updated' });
 
       this.connect();
     }

@@ -25,11 +25,14 @@ window.DEC4LAND_LOCAL_CONFIG = {
   streamelementsToken: "",     // Seu JWT Token do StreamElements
 
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
-  latestFollower: "Marcel_Gamer",
+  latestFollower: "-",
   latestDonate: "-",
-  latestSub: "Marcel (Tier 1)",
+  latestSub: "-",
 
   // Bot de Boas-Vindas no Chat da Twitch
   welcomeBotEnabled: true,
-  welcomeBotMessage: "Seja muito bem-vindo(a) à tropa, @{user}! Valeu pelo follow! 🚀🔥"
+  welcomeBotMessage: "Seja muito bem-vindo(a) à tropa, @{user}! Valeu pelo follow! 🚀🔥",
+
+  // Volume dos alertas sonoros (0.0 a 1.0)
+  alertVolume: 0.8
 };

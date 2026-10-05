@@ -1066,16 +1066,26 @@
       }
     }
 
+    function sanitizeHudParam(val) {
+      if (!val) return null;
+      const v = String(val).trim().toLowerCase();
+      const isSynthetic = v === 'marcel_gamer' ||
+                          v === 'marcel' ||
+                          v === 'marcel_gamer (r$ 50,00)' ||
+                          v === 'marcel_gamer (r$ 25,00)' ||
+                          v === 'marcel (r$ 50,00)' ||
+                          v === 'marcel (tier 1)' ||
+                          v === 'lucas_apoiador (r$ 25,00)';
+      return isSynthetic ? null : val;
+    }
+
     function updateCardUrls() {
       const base = getBaseUrl();
       document.getElementById('url-starting').textContent = base + 'starting.html';
       let gameplayUrl = base + 'gameplay.html?channel=' + encodeURIComponent(currentChannel);
-      const sF = localStorage.getItem('dec4land_real_follower');
-      const sD = localStorage.getItem('dec4land_real_donate');
-      const sS = localStorage.getItem('dec4land_real_sub');
-      const cleanF = (sF && !sF.toLowerCase().includes('marcel_gamer')) ? sF : null;
-      const cleanD = (sD && !sD.toLowerCase().includes('marcel') && !sD.includes('50,00')) ? sD : null;
-      const cleanS = (sS && !sS.toLowerCase().includes('marcel_gamer')) ? sS : null;
+      const cleanF = sanitizeHudParam(localStorage.getItem('dec4land_real_follower'));
+      const cleanD = sanitizeHudParam(localStorage.getItem('dec4land_real_donate'));
+      const cleanS = sanitizeHudParam(localStorage.getItem('dec4land_real_sub'));
 
       if (cleanF) gameplayUrl += '&follow=' + encodeURIComponent(cleanF);
       if (cleanD) gameplayUrl += '&donate=' + encodeURIComponent(cleanD);
@@ -1182,17 +1192,45 @@
         if (input) input.value = currentChannel;
       }
 
+      const isSyntheticTestValue = (val) => {
+        if (!val) return false;
+        const v = String(val).trim().toLowerCase();
+        return v === 'marcel_gamer' ||
+               v === 'marcel' ||
+               v === 'marcel_gamer (r$ 50,00)' ||
+               v === 'marcel_gamer (r$ 25,00)' ||
+               v === 'marcel (r$ 50,00)' ||
+               v === 'marcel (tier 1)' ||
+               v === 'lucas_apoiador (r$ 25,00)';
+      };
+
       const savedFollow = localStorage.getItem('dec4land_real_follower');
       const savedDon = localStorage.getItem('dec4land_real_donate');
       const savedSb = localStorage.getItem('dec4land_real_sub');
-      if (savedFollow && !savedFollow.toLowerCase().includes('marcel_gamer')) document.getElementById('hud-real-follower').value = savedFollow;
-      if (savedDon && !savedDon.toLowerCase().includes('marcel') && !savedDon.includes('50,00')) {
-        document.getElementById('hud-real-donate').value = savedDon;
-      } else {
-        try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
-        document.getElementById('hud-real-donate').value = '';
+      if (savedFollow) {
+        if (isSyntheticTestValue(savedFollow)) {
+          try { localStorage.removeItem('dec4land_real_follower'); } catch(e) {}
+        } else {
+          const el = document.getElementById('hud-real-follower');
+          if (el) el.value = savedFollow;
+        }
       }
-      if (savedSb && !savedSb.toLowerCase().includes('marcel_gamer')) document.getElementById('hud-real-sub').value = savedSb;
+      if (savedDon) {
+        if (isSyntheticTestValue(savedDon)) {
+          try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
+        } else {
+          const el = document.getElementById('hud-real-donate');
+          if (el) el.value = savedDon;
+        }
+      }
+      if (savedSb) {
+        if (isSyntheticTestValue(savedSb)) {
+          try { localStorage.removeItem('dec4land_real_sub'); } catch(e) {}
+        } else {
+          const el = document.getElementById('hud-real-sub');
+          if (el) el.value = savedSb;
+        }
+      }
 
       // Carregar credenciais EventSub salvas
       const savedClientId = localStorage.getItem('dec4land_eventsub_client_id') || (window.DEC4LAND_CONFIG?.twitchClientId || '');
@@ -1279,12 +1317,9 @@
       currentScene = sceneName;
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
-      const sF = localStorage.getItem('dec4land_real_follower');
-      const sD = localStorage.getItem('dec4land_real_donate');
-      const sS = localStorage.getItem('dec4land_real_sub');
-      const cleanF = (sF && !sF.toLowerCase().includes('marcel_gamer')) ? sF : null;
-      const cleanD = (sD && !sD.toLowerCase().includes('marcel') && !sD.includes('50,00')) ? sD : null;
-      const cleanS = (sS && !sS.toLowerCase().includes('marcel_gamer')) ? sS : null;
+      const cleanF = sanitizeHudParam(localStorage.getItem('dec4land_real_follower'));
+      const cleanD = sanitizeHudParam(localStorage.getItem('dec4land_real_donate'));
+      const cleanS = sanitizeHudParam(localStorage.getItem('dec4land_real_sub'));
       let hudParams = '?channel=' + encodeURIComponent(currentChannel);
       if (cleanF) hudParams += '&follow=' + encodeURIComponent(cleanF);
       if (cleanD) hudParams += '&donate=' + encodeURIComponent(cleanD);
@@ -1340,12 +1375,12 @@
       let targetUrl = base + currentScene + '.html';
       if (currentScene === 'gameplay' || currentScene === 'conversa' || currentScene === 'react') {
         targetUrl += '?channel=' + encodeURIComponent(currentChannel);
-        const sF = localStorage.getItem('dec4land_real_follower');
-        const sD = localStorage.getItem('dec4land_real_donate');
-        const sS = localStorage.getItem('dec4land_real_sub');
-        if (sF) targetUrl += '&follow=' + encodeURIComponent(sF);
-        if (sD) targetUrl += '&donate=' + encodeURIComponent(sD);
-        if (sS) targetUrl += '&sub=' + encodeURIComponent(sS);
+        const cleanF = sanitizeHudParam(localStorage.getItem('dec4land_real_follower'));
+        const cleanD = sanitizeHudParam(localStorage.getItem('dec4land_real_donate'));
+        const cleanS = sanitizeHudParam(localStorage.getItem('dec4land_real_sub'));
+        if (cleanF) targetUrl += '&follow=' + encodeURIComponent(cleanF);
+        if (cleanD) targetUrl += '&donate=' + encodeURIComponent(cleanD);
+        if (cleanS) targetUrl += '&sub=' + encodeURIComponent(cleanS);
       }
       navigator.clipboard.writeText(targetUrl).then(() => {
         alert('URL copiada para a área de transferência:\n' + targetUrl + '\n\nBasta colar como Navegador (Browser Source) no OBS Studio!');
@@ -1616,6 +1651,7 @@
   </script>
   <script src="config.local.js"></script>
   <script src="config.js"></script>
+  <script src="js/twitch-irc.js"></script>
   <script src="js/alerts.js"></script>
   <script src="js/eventsub.js"></script>
   <script src="js/streamelements.js"></script>

@@ -29,14 +29,21 @@ const baseConfig = {
 
   // Bot de Boas-Vindas no Chat da Twitch
   welcomeBotEnabled: true,
-  welcomeBotMessage: "Seja muito bem-vindo(a) à tropa, @{user}! Valeu pelo follow! 🚀🔥"
+  welcomeBotMessage: "Seja muito bem-vindo(a) à tropa, @{user}! Valeu pelo follow! 🚀🔥",
+
+  // Volume dos alertas visuais e sonoros (0.0 mudo até 1.0 volume máximo)
+  alertVolume: 0.8
 };
 
 window.DEC4LAND_CONFIG = Object.assign({}, baseConfig, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
 
-// Carrega automaticamente o config.local.js se existir na pasta
+// Carrega automaticamente o config.local.js se existir na pasta e ainda não estiver carregado/presente no DOM
 (function() {
-  if (typeof document !== 'undefined' && !window._dec4landLocalConfigLoaded) {
+  if (typeof document !== 'undefined') {
+    if (window.DEC4LAND_LOCAL_CONFIG || window._dec4landLocalConfigLoaded || document.querySelector('script[src*="config.local.js"]')) {
+      window._dec4landLocalConfigLoaded = true;
+      return;
+    }
     window._dec4landLocalConfigLoaded = true;
     const s = document.createElement('script');
     s.src = 'config.local.js';

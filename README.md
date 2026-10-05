@@ -125,9 +125,10 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
   - `conversa.html?name=DEC4LAND` (define o nome na barra da webcam)
   - `conversa.html?mock=true` (ativa rotação contínua de chat simulado)
   - `conversa.html?goal=500&current=340&goal_title=META+DE+SUBS` (personaliza a barra de meta)
-- **Atalhos de Teclado**:
+- **Atalhos de Teclado (Modo Interativo do OBS / Navegador)**:
   - `C`: Simular nova mensagem no chat
-  - `V`: Ligar / Desligar webcam de teste no navegador
+  - `T`: Disparar alerta de teste demonstrativo
+  *(A moldura da webcam possui recorte SVG 100% transparente para encaixar sua Câmera / Dispositivo de Captura de Vídeo diretamente por trás no OBS).*
 
 ---
 
@@ -149,9 +150,8 @@ Você pode abrir o arquivo `index.html` diretamente em qualquer navegador (Chrom
   - `react.html?channel=dec4land` (define o canal da Twitch)
   - `react.html?name=DEC4LAND` (nome do streamer)
   - `react.html?mock=true` (simulação de chat e eventos)
-- **Atalhos de Teclado**:
+- **Atalhos de Teclado (Modo Interativo do OBS / Navegador)**:
   - `C`: Simular nova mensagem no chat
-  - `V`: Ligar / Desligar webcam de teste no navegador
   - `T`: Disparar alerta demonstrativo
 
 ---

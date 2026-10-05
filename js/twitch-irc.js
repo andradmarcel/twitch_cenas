@@ -228,6 +228,7 @@
     }
 
     static formatEmotes(text, emotesTag) {
+      if (!text) return '';
       if (!emotesTag) return TwitchIrcClient.escapeHtml(text);
 
       const replacements = [];
@@ -237,21 +238,41 @@
         if (!positions) return;
         positions.split(',').forEach(pos => {
           const [start, end] = pos.split('-').map(Number);
-          if (!isNaN(start) && !isNaN(end)) {
+          if (!isNaN(start) && !isNaN(end) && start >= 0 && end >= start && end < text.length) {
             replacements.push({ id, start, end });
           }
         });
       });
 
-      replacements.sort((a, b) => b.start - a.start);
+      if (replacements.length === 0) {
+        return TwitchIrcClient.escapeHtml(text);
+      }
 
-      let html = text;
-      replacements.forEach(r => {
-        const before = html.substring(0, r.start);
-        const after = html.substring(r.end + 1);
-        const emoteImg = `<img class="twitch-emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/2.0" alt="emote">`;
-        html = before + emoteImg + after;
-      });
+      // Ordena em ordem crescente para fatiar sequencialmente de forma limpa e segura
+      replacements.sort((a, b) => a.start - b.start);
+
+      let cur = 0;
+      let html = '';
+
+      for (const r of replacements) {
+        if (r.start < cur) continue; // Evita sobreposição acidental
+
+        // 1. Trecho de texto anterior ao emote (100% escapado contra XSS)
+        const textBefore = text.substring(cur, r.start);
+        html += TwitchIrcClient.escapeHtml(textBefore);
+
+        // 2. Imagem segura do emote com alt/title sanitizados
+        const rawEmoteName = text.substring(r.start, r.end + 1);
+        const safeAlt = TwitchIrcClient.escapeHtml(rawEmoteName);
+        html += `<img class="twitch-emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/2.0" alt="${safeAlt}" title="${safeAlt}">`;
+
+        cur = r.end + 1;
+      }
+
+      // 3. Trecho de texto restante após o último emote (100% escapado contra XSS)
+      if (cur < text.length) {
+        html += TwitchIrcClient.escapeHtml(text.substring(cur));
+      }
 
       return html;
     }
