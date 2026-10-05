@@ -1075,7 +1075,9 @@
                           v === 'marcel_gamer (r$ 25,00)' ||
                           v === 'marcel (r$ 50,00)' ||
                           v === 'marcel (tier 1)' ||
-                          v === 'lucas_apoiador (r$ 25,00)';
+                          v === 'lucas_apoiador (r$ 25,00)' ||
+                          v === 'anarchyzera12' ||
+                          v === 'anarchyzera';
       return isSynthetic ? null : val;
     }
 
@@ -1201,35 +1203,55 @@
                v === 'marcel_gamer (r$ 25,00)' ||
                v === 'marcel (r$ 50,00)' ||
                v === 'marcel (tier 1)' ||
-               v === 'lucas_apoiador (r$ 25,00)';
+               v === 'lucas_apoiador (r$ 25,00)' ||
+               v === 'anarchyzera12' ||
+               v === 'anarchyzera';
       };
 
+      const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
       const savedFollow = localStorage.getItem('dec4land_real_follower');
       const savedDon = localStorage.getItem('dec4land_real_donate');
       const savedSb = localStorage.getItem('dec4land_real_sub');
       if (savedFollow) {
         if (isSyntheticTestValue(savedFollow)) {
           try { localStorage.removeItem('dec4land_real_follower'); } catch(e) {}
+          const el = document.getElementById('hud-real-follower');
+          if (el && cfg.latestFollower && cfg.latestFollower !== '-') el.value = cfg.latestFollower;
         } else {
           const el = document.getElementById('hud-real-follower');
           if (el) el.value = savedFollow;
         }
+      } else if (cfg.latestFollower && cfg.latestFollower !== '-') {
+        const el = document.getElementById('hud-real-follower');
+        if (el) el.value = cfg.latestFollower;
       }
+
       if (savedDon) {
         if (isSyntheticTestValue(savedDon)) {
           try { localStorage.removeItem('dec4land_real_donate'); } catch(e) {}
+          const el = document.getElementById('hud-real-donate');
+          if (el && cfg.latestDonate && cfg.latestDonate !== '-') el.value = cfg.latestDonate;
         } else {
           const el = document.getElementById('hud-real-donate');
           if (el) el.value = savedDon;
         }
+      } else if (cfg.latestDonate && cfg.latestDonate !== '-') {
+        const el = document.getElementById('hud-real-donate');
+        if (el) el.value = cfg.latestDonate;
       }
+
       if (savedSb) {
         if (isSyntheticTestValue(savedSb)) {
           try { localStorage.removeItem('dec4land_real_sub'); } catch(e) {}
+          const el = document.getElementById('hud-real-sub');
+          if (el && cfg.latestSub && cfg.latestSub !== '-') el.value = cfg.latestSub;
         } else {
           const el = document.getElementById('hud-real-sub');
           if (el) el.value = savedSb;
         }
+      } else if (cfg.latestSub && cfg.latestSub !== '-') {
+        const el = document.getElementById('hud-real-sub');
+        if (el) el.value = cfg.latestSub;
       }
 
       // Carregar credenciais EventSub salvas
@@ -1268,7 +1290,6 @@
       const botToggle = document.getElementById('welcome-bot-toggle');
       const botInput = document.getElementById('welcome-bot-message-input');
       const savedBotEnabled = localStorage.getItem('dec4land_welcome_bot_enabled');
-      const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
       if (botToggle) {
         botToggle.checked = savedBotEnabled !== null ? (savedBotEnabled === 'true') : (cfg.welcomeBotEnabled !== false);
         botToggle.addEventListener('change', () => {

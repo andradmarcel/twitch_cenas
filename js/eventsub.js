@@ -541,13 +541,8 @@
         }
 
         loopCount++;
-        // Sincroniza novos seguidores com a API oficial da Twitch
+        // Sincroniza novos seguidores com a API oficial da Twitch (ordenado cronologicamente com followed_at)
         await this.syncFollowerWatchdog(clientId, token);
-
-        // A cada 60s (a cada 15 voltas de 4s), atualiza o último sub diretamente da Twitch
-        if (loopCount % 15 === 0) {
-          await this.fetchLatestSub(clientId, token);
-        }
       }, 4000);
     }
 
@@ -622,8 +617,27 @@
     }
 
 
-    // Consulta os inscritos existentes no canal na Twitch Helix API via requisição única otimizada (first=100)
+    // Consulta inicial do último sub (prioriza config/storage; evita sobrescrever com lista desordenada do Helix)
     async fetchLatestSub(clientId, token) {
+      const isSynthetic = (v) => {
+        if (!v) return true;
+        const s = String(v).toLowerCase().trim();
+        return s === '-' || s === 'marcel_gamer' || s === 'anarchyzera12' || s === 'anarchyzera';
+      };
+
+      const currentSavedSub = localStorage.getItem('dec4land_real_sub');
+      const cfg = Object.assign({}, window.DEC4LAND_CONFIG || {}, window.DEC4LAND_LOCAL_CONFIG || {});
+      const fallback = (!isSynthetic(currentSavedSub)) 
+        ? currentSavedSub 
+        : ((cfg.latestSub && !isSynthetic(cfg.latestSub)) ? cfg.latestSub : '');
+
+      if (fallback && fallback !== '-') {
+        if (typeof window.updateSub === 'function') {
+          window.updateSub(fallback);
+        }
+        return fallback;
+      }
+
       if (!this.broadcasterId || !token || !clientId) return null;
       try {
         let allSubs = [];
@@ -650,15 +664,14 @@
           return uId !== String(this.broadcasterId) && uName !== channelLower && uName !== 'dec4land';
         });
 
-        if (validSubs.length > 0) {
+        if (validSubs.length === 1) {
           const sub = validSubs[0];
-          // Se for presente, credita quem deu o presente (gifter)
           const subName = sub.is_gift && sub.gifter_name 
             ? `${sub.gifter_name} (Gift)` 
             : (sub.user_name || sub.user_login);
 
-          if (subName) {
-            console.log(`[EventSub] 💎 Último sub real carregado da Twitch: ${subName}`);
+          if (subName && !isSynthetic(subName)) {
+            console.log(`[EventSub] 💎 Sub inicial carregado da Twitch: ${subName}`);
             if (typeof window.updateSub === 'function') {
               window.updateSub(subName);
             }
@@ -674,19 +687,6 @@
         }
       } catch(err) {
         console.warn('[EventSub] Erro ao consultar último sub via Helix:', err);
-      }
-
-      // Fallback: se a API falhar, usa config ou localStorage válido (nunca Marcel_Gamer)
-      const currentSavedSub = localStorage.getItem('dec4land_real_sub');
-      const fallback = (currentSavedSub && !currentSavedSub.toLowerCase().includes('marcel_gamer')) 
-        ? currentSavedSub 
-        : (window.DEC4LAND_CONFIG?.latestSub || '');
-
-      if (fallback && fallback !== '-' && !fallback.toLowerCase().includes('marcel_gamer')) {
-        if (typeof window.updateSub === 'function') {
-          window.updateSub(fallback);
-        }
-        return fallback;
       }
       return null;
     }

@@ -66,11 +66,14 @@
     if (!val) return false;
     const v = String(val).toLowerCase().trim();
     return v === 'marcel_gamer' ||
+           v === 'marcel' ||
            v === 'marcel_gamer (r$ 50,00)' ||
            v === 'marcel_gamer (r$ 25,00)' ||
            v === 'marcel (r$ 50,00)' ||
            v === 'marcel (tier 1)' ||
-           v === 'lucas_apoiador (r$ 25,00)';
+           v === 'lucas_apoiador (r$ 25,00)' ||
+           v === 'anarchyzera12' ||
+           v === 'anarchyzera';
   };
 
   if (realSub && isSyntheticTestValue(realSub)) {

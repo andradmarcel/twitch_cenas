@@ -25,7 +25,7 @@ const baseConfig = {
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
   latestFollower: "laktas1",
   latestDonate: "-",
-  latestSub: "amahzy (Gift)",
+  latestSub: "amahzy",
 
   // Bot de Boas-Vindas no Chat da Twitch
   welcomeBotEnabled: true,
