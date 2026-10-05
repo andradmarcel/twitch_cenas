@@ -572,11 +572,10 @@
                   detail: 'começou a seguir o canal!'
                 });
               }
-              // O Watchdog só dispara mensagem no chat se o WebSocket estiver DESCONECTADO (fallback de emergência)
-              // Se o WebSocket estiver ativo, o evento channel.follow já é o canal oficial de envio
-              if (this.status !== 'connected') {
-                this.sendWelcomeMessage(followerName);
-              }
+              // O Watchdog SEMPRE dispara a mensagem de boas-vindas como garantia máxima!
+              // A trava atômica anti-duplicação (recentFollowerWelcomeSet + localStorage + BroadcastChannel)
+              // impede que mensagens duplicadas sejam enviadas caso o WebSocket também processe o evento.
+              this.sendWelcomeMessage(followerName);
             }
 
             // Atualiza letreiro e HUD com o seguidor mais recente
@@ -1076,11 +1075,6 @@
           console.log('[WelcomeBot] Bot de boas-vindas desativado nesta fonte.');
           return { success: false, error: 'Bot desativado nesta fonte.' };
         }
-        // Se estiver no Painel de Controle (index.html), delega envio de seguidores reais ao OBS para evitar duplicata
-        if (role === 'dashboard') {
-          console.log('[WelcomeBot] Painel de Controle: envio de boas-vindas para seguidor real delegado ao OBS Studio.');
-          return { success: false, error: 'Envio delegado ao OBS Studio.' };
-        }
       }
 
       const lowerFollower = followerName.toLowerCase().trim();
@@ -1088,7 +1082,7 @@
       const now = Date.now();
       const LOCK_WINDOW_MS = 600000; // 10 minutos de retenção anti-duplicação
 
-      // Trava atômica multi-cenas (evita duplicação caso múltiplas cenas OBS estejam abertas)
+      // Trava atômica multi-cenas (evita duplicação caso múltiplas cenas OBS ou abas estejam abertas)
       if (!isTest) {
         // 1. Verificação local em memória
         if (this.recentFollowerWelcomeSet.has(lowerFollower)) {
@@ -1099,25 +1093,30 @@
         // 2. Verificação no localStorage compartilhado
         const lastSent = parseInt(localStorage.getItem(dedupeKey) || '0', 10);
         if (now - lastSent < LOCK_WINDOW_MS) {
-          console.log(`[WelcomeBot] Mensagem para @${followerName} já enviada recentemente por outra cena (${Math.round((now - lastSent) / 1000)}s atrás).`);
+          console.log(`[WelcomeBot] Mensagem para @${followerName} já enviada recentemente (${Math.round((now - lastSent) / 1000)}s atrás).`);
           return { success: false, error: 'Mensagem já enviada recentemente.' };
         }
 
-        // 3. Se for uma cena secundária (gameplay, conversa, react), aguarda 1200ms
-        // permitindo que a fonte mestre (alerts.html) dispare e propague a trava via BroadcastChannel / IRC
-        const delay = (role === 'scene') ? 1200 : 0;
+        // 3. Escalonamento inteligente de envio para evitar conflito entre instâncias:
+        // - 'master' (alerts.html): prioridade instantânea (0ms)
+        // - 'scene' (gameplay.html, conversa.html, react.html): aguarda 500ms
+        // - 'dashboard' (index.html): aguarda 1000ms caso o OBS esteja rodando; se o OBS não enviar, o dashboard envia com sucesso!
+        let delay = 0;
+        if (role === 'scene') delay = 500;
+        else if (role === 'dashboard') delay = 1000;
+
         if (delay > 0) {
-          console.log(`[WelcomeBot] Cena secundária: aguardando ${delay}ms para verificar se fonte mestre envia...`);
+          console.log(`[WelcomeBot] Fonte com papel "${role}": aguardando ${delay}ms para verificar se fonte prioritária já enviou...`);
           await new Promise(r => setTimeout(r, delay));
 
-          // Reavalia após o delay se a fonte mestre ou o chat IRC já capturou o envio
+          // Reavalia após o delay se outra fonte já capturou e enviou
           if (this.recentFollowerWelcomeSet.has(lowerFollower)) {
-            console.log(`[WelcomeBot] Mensagem para @${followerName} confirmada pela fonte mestre durante a espera.`);
-            return { success: false, error: 'Mensagem já enviada pela fonte mestre.' };
+            console.log(`[WelcomeBot] Mensagem para @${followerName} confirmada por outra fonte durante a espera.`);
+            return { success: false, error: 'Mensagem já enviada por outra fonte.' };
           }
           const recheck = parseInt(localStorage.getItem(dedupeKey) || '0', 10);
           if (Date.now() - recheck < LOCK_WINDOW_MS) {
-            console.log(`[WelcomeBot] Mensagem para @${followerName} confirmada em outra cena do OBS.`);
+            console.log(`[WelcomeBot] Mensagem para @${followerName} confirmada no localStorage.`);
             return { success: false, error: 'Mensagem já enviada por outra cena.' };
           }
         }
@@ -1155,6 +1154,11 @@
         window.dispatchEvent(new CustomEvent('dec4land_welcome_message_sent', {
           detail: { user: followerName, message: finalMessage }
         }));
+      } else {
+        // Se a chamada de API falhou, remove a trava para permitir reenvio
+        this.recentFollowerWelcomeSet.delete(lowerFollower);
+        try { localStorage.removeItem(dedupeKey); } catch(e) {}
+        console.warn(`[WelcomeBot] ⚠️ Falha ao postar no chat para @${followerName}:`, res.error);
       }
       return res;
     }

@@ -18,8 +18,12 @@ const baseConfig = {
   twitchClientId: "gp762nuuoqcoxypju8c569th9wz7q5",
   twitchOAuthToken: "", // Mantenha vazio aqui. Seu token real fica seguro no config.local.js
 
+  // StreamElements & LivePix (Alertas de Pix/Doação e Atualização do ÚLTIMO DONATE)
+  streamelementsAccountId: "",
+  streamelementsToken: "",
+
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
-  latestFollower: "O_AmanteBR",
+  latestFollower: "laktas1",
   latestDonate: "-",
   latestSub: "amahzy (Gift)",
 

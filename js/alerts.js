@@ -353,7 +353,9 @@
           typeClass = 'type-raid';
         }
 
-        const detailHtml = rawDetail ? this.escapeHtml(rawDetail) : defaultDetail;
+        const detailHtml = rawDetail
+          ? this.escapeHtml(rawDetail).replace(/&lt;b&gt;/gi, '<b>').replace(/&lt;\/b&gt;/gi, '</b>')
+          : defaultDetail;
 
         // Build safe alert HTML
         const alertBox = document.createElement('div');

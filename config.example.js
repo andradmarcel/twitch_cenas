@@ -20,6 +20,10 @@ window.DEC4LAND_LOCAL_CONFIG = {
   twitchClientId: "gp762nuuoqcoxypju8c569th9wz7q5",
   twitchOAuthToken: "", // Cole seu token aqui
 
+  // StreamElements & LivePix (Alertas de Pix/Doação e Atualização do ÚLTIMO DONATE)
+  streamelementsAccountId: "", // Seu Account ID do StreamElements
+  streamelementsToken: "",     // Seu JWT Token do StreamElements
+
   // Letreiros Iniciais das Molduras (Último Follow, Donate, Sub)
   latestFollower: "Marcel_Gamer",
   latestDonate: "-",
